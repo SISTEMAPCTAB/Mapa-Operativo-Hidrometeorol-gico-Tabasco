@@ -1,7 +1,8 @@
 (()=>{"use strict";
 const C=window.MAP_CONFIG, COLORS=["green","yellow","orange","red"], LABELS=["Verde","Amarillo","Naranja","Rojo"];
 const map=L.map("map",{zoomControl:true}).setView([17.70,-92.65],8);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:"&copy; OpenStreetMap"}).addTo(map);
+const base=L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:"&copy; OpenStreetMap contributors",crossOrigin:true}).addTo(map);
+base.on("tileerror",()=>{const s=document.getElementById("statusText");if(s)s.textContent="Mapa cargado, pero algunas teselas de OpenStreetMap no respondieron; reintentando…";});
 const levelLayer=L.layerGroup().addTo(map),rainLayer=L.layerGroup().addTo(map),upstreamLayer=L.layerGroup().addTo(map);
 const norm=s=>String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\s+/g," ").trim();
 const finite=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -91,5 +92,7 @@ document.getElementById("refreshBtn").addEventListener("click",load);
 document.getElementById("showLevels").addEventListener("change",e=>e.target.checked?levelLayer.addTo(map):map.removeLayer(levelLayer));
 document.getElementById("showRain").addEventListener("change",e=>e.target.checked?rainLayer.addTo(map):map.removeLayer(rainLayer));
 document.getElementById("showUpstream").addEventListener("change",e=>e.target.checked?upstreamLayer.addTo(map):map.removeLayer(upstreamLayer));
+setTimeout(()=>map.invalidateSize(true),250);
+window.addEventListener("resize",()=>map.invalidateSize(false));
 load();setInterval(load,15*60*1000);
 })();
