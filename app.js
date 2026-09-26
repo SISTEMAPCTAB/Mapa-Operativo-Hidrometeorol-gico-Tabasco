@@ -42,34 +42,65 @@ function forecastLabel(min,max){
   if(finite(min)&&finite(max))return `${Number(min).toFixed(0)}–${Number(max).toFixed(0)} mm`;
   return finite(min)?`≥${Number(min).toFixed(0)} mm`:`≤${Number(max).toFixed(0)} mm`;
 }
-function renderForecast(){
+const forecastGeomCache=new Map();
+async function basinPolygonAt(name,cfg){
+  if(forecastGeomCache.has(name))return forecastGeomCache.get(name);
+  const [lat,lon]=cfg.center;
+  const qs=new URLSearchParams({
+    geometry:`${lon},${lat}`,
+    geometryType:"esriGeometryPoint",
+    inSR:"4326",
+    spatialRel:"esriSpatialRelIntersects",
+    outFields:"FID,Nombre_de,Entidad_es,Nombre_d_1,CVE_C",
+    returnGeometry:"true",
+    outSR:"4326",
+    f:"geojson"
+  });
+  try{
+    const r=await fetch(C.conaguaBasinsService+"?"+qs.toString(),{cache:"force-cache"});
+    if(!r.ok)throw new Error("HTTP "+r.status);
+    const gj=await r.json();
+    const feature=gj?.features?.[0]||null;
+    forecastGeomCache.set(name,feature);
+    return feature;
+  }catch(e){
+    console.warn("No fue posible obtener polígono CONAGUA para",name,e);
+    forecastGeomCache.set(name,null);
+    return null;
+  }
+}
+let forecastRenderSeq=0;
+async function renderForecast(){
+  const seq=++forecastRenderSeq;
   forecastLayer.clearLayers();
   const win=document.getElementById("forecastWindow")?.value||"off";
   if(win==="off"||!latestForecastData)return;
   const src=latestForecastData?.smn96?.ventanas?.[win]||{};
   for(const [name,val] of Object.entries(src)){
+    if(seq!==forecastRenderSeq)return;
     const cfg=C.forecastBasins?.[name];
     if(!cfg)continue;
     const min=Number(val?.min_mm),max=Number(val?.max_mm);
-    // El mapa destaca los rangos de mayor interés operativo: muy fuerte o superior.
     if(!Number.isFinite(max)||max<50)continue;
+    const feature=await basinPolygonAt(name,cfg);
+    if(seq!==forecastRenderSeq)return;
+    if(!feature)continue;
     const color=forecastColor(min,max);
-    const circle=L.circle(cfg.center,{
-      radius:cfg.radius,
-      color,
-      weight:2,
-      fillColor:color,
-      fillOpacity:.18,
-      opacity:.85
-    }).bindPopup(`<div class="popup-title">${esc(name)} · SMN</div><div class="popup-grid">
+    const layer=L.geoJSON(feature,{
+      style:{color,weight:2,fillColor:color,fillOpacity:.22,opacity:.9}
+    });
+    const official=feature?.properties?.Nombre_de||feature?.properties?.Nombre_d_1||"Cuenca CONAGUA";
+    layer.bindPopup(`<div class="popup-title">${esc(name)} · SMN</div><div class="popup-grid">
       <b>Ventana</b><span>${esc(win)} h</span>
       <b>Pronóstico</b><span>${forecastLabel(min,max)}</span>
+      <b>Delimitación</b><span>${esc(official)} · CONAGUA</span>
       <b>Emisión</b><span>${esc(latestForecastData?.smn96?.emision||"s/d")}</span>
       <b>Fecha</b><span>${esc(latestForecastData?.smn96?.fecha||"s/d")}</span>
-      <b>Nota</b><span>Área de referencia visual para la cuenca; no representa el límite oficial.</span>
+      <b>Nota</b><span>Polígono oficial de la cuenca hidrológica CONAGUA que contiene el punto de referencia de la cuenca SMN.</span>
     </div>`);
-    circle.addTo(forecastLayer);
-    L.marker(cfg.center,{
+    layer.addTo(forecastLayer);
+    const center=layer.getBounds().getCenter();
+    L.marker(center,{
       interactive:false,
       icon:L.divIcon({className:"",html:`<div class="forecast-basin-label">${esc(name)} · ${forecastLabel(min,max)}</div>`})
     }).addTo(forecastLayer);
@@ -237,7 +268,7 @@ document.getElementById("refreshBtn").addEventListener("click",load);
 document.getElementById("showLevels").addEventListener("change",e=>e.target.checked?levelLayer.addTo(map):map.removeLayer(levelLayer));
 document.getElementById("showRain").addEventListener("change",e=>e.target.checked?rainLayer.addTo(map):map.removeLayer(rainLayer));
 document.getElementById("showUpstream").addEventListener("change",e=>e.target.checked?upstreamLayer.addTo(map):map.removeLayer(upstreamLayer));
-document.getElementById("forecastWindow").addEventListener("change",renderForecast);
+document.getElementById("forecastWindow").addEventListener("change",()=>{renderForecast();});
 setTimeout(()=>map.invalidateSize(true),250);window.addEventListener("resize",()=>map.invalidateSize(false));
 load();setInterval(load,15*60*1000);
 })();
