@@ -230,7 +230,7 @@ function sprHealthLabel(){
  if(!sprHealth?.checked_at)return "Pendiente de verificación automática";
  const d=new Date(sprHealth.checked_at);
  const when=Number.isNaN(+d)?sprHealth.checked_at:d.toLocaleString("es-MX",{timeZone:"America/Mexico_City"});
- const states=(sprHealth.sources||[]).map(s=>s.name+": "+(s.http_ok?"portal accesible":"sin respuesta válida")).join(" · ");
+ const states=(sprHealth.sources||[]).map(s=>s.name+": "+(s.http_ok?"consulta automática accesible":s.http_status===403||s.http_status===302||/403|redirect/i.test(s.error||"")?"consulta automática restringida":"consulta automática sin respuesta verificable")).join(" · ");
  return "Última comprobación: "+when+" · "+states+" · Accesibilidad NO confirma pronóstico vigente.";
 }
 function drawSPR(doc){
