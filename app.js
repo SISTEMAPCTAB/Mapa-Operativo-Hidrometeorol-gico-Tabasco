@@ -4,6 +4,9 @@ const LEVEL_COLORS=["green","yellow","orange","red"], LEVEL_LABELS=["Verde","Ama
 const map=L.map("map",{zoomControl:true}).setView([17.70,-92.65],8);
 const base=L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:"&copy; OpenStreetMap contributors",crossOrigin:true}).addTo(map);
 base.on("tileerror",()=>{const s=document.getElementById("statusText");if(s)s.textContent="Mapa cargado, pero algunas teselas de OpenStreetMap no respondieron; reintentando…";});
+map.createPane("forecastPane");
+map.getPane("forecastPane").style.zIndex=450;
+map.getPane("forecastPane").style.pointerEvents="auto";
 const levelLayer=L.layerGroup().addTo(map),rainLayer=L.layerGroup().addTo(map),upstreamLayer=L.layerGroup().addTo(map),forecastLayer=L.layerGroup().addTo(map);
 let latestForecastData=null;
 
@@ -43,24 +46,54 @@ function forecastLabel(min,max){
   return finite(min)?`≥${Number(min).toFixed(0)} mm`:`≤${Number(max).toFixed(0)} mm`;
 }
 const forecastGeomCache=new Map();
+
+function arcgisJsonp(params){
+  return new Promise((resolve,reject)=>{
+    const cb="__arcgis_"+Date.now()+"_"+Math.random().toString(36).slice(2);
+    const script=document.createElement("script");
+    const timer=setTimeout(()=>{cleanup();reject(new Error("timeout"));},12000);
+    function cleanup(){
+      clearTimeout(timer);
+      try{delete window[cb]}catch{}
+      script.remove();
+    }
+    window[cb]=(data)=>{cleanup();resolve(data)};
+    params.set("f","json");
+    params.set("callback",cb);
+    script.src=C.conaguaBasinsService+"?"+params.toString();
+    script.onerror=()=>{cleanup();reject(new Error("jsonp error"))};
+    document.head.appendChild(script);
+  });
+}
+
 async function basinPolygonAt(name,cfg){
   if(forecastGeomCache.has(name))return forecastGeomCache.get(name);
   const [lat,lon]=cfg.center;
-  const qs=new URLSearchParams({
+  const params=new URLSearchParams({
     geometry:`${lon},${lat}`,
     geometryType:"esriGeometryPoint",
     inSR:"4326",
     spatialRel:"esriSpatialRelIntersects",
     outFields:"FID,Nombre_de,Entidad_es,Nombre_d_1,CVE_C",
     returnGeometry:"true",
-    outSR:"4326",
-    f:"geojson"
+    outSR:"4326"
   });
+
+  // Intento normal (CORS). Si el servidor no autoriza CORS,
+  // se usa JSONP, soportado por ArcGIS REST, para que GitHub Pages
+  // pueda obtener el polígono oficial sin proxy.
   try{
-    const r=await fetch(C.conaguaBasinsService+"?"+qs.toString(),{cache:"force-cache"});
-    if(!r.ok)throw new Error("HTTP "+r.status);
-    const gj=await r.json();
-    const feature=gj?.features?.[0]||null;
+    const r=await fetch(C.conaguaBasinsService+"?"+params.toString()+"&f=json",{cache:"force-cache"});
+    if(r.ok){
+      const data=await r.json();
+      const feature=data?.features?.[0]||null;
+      if(feature){forecastGeomCache.set(name,feature);return feature;}
+    }
+  }catch{}
+
+  try{
+    const data=await arcgisJsonp(params);
+    const feature=data?.features?.[0]||null;
     forecastGeomCache.set(name,feature);
     return feature;
   }catch(e){
@@ -69,10 +102,19 @@ async function basinPolygonAt(name,cfg){
     return null;
   }
 }
+
+function esriFeatureLayer(feature,style){
+  const rings=feature?.geometry?.rings;
+  if(!Array.isArray(rings)||!rings.length)return null;
+  const latlngs=rings.map(ring=>ring.map(pt=>[Number(pt[1]),Number(pt[0])]));
+  return L.polygon(latlngs,{...style,pane:"forecastPane"});
+}
+
 let forecastRenderSeq=0;
 async function renderForecast(){
   const seq=++forecastRenderSeq;
   forecastLayer.clearLayers();
+  let rendered=0;
   const win=document.getElementById("forecastWindow")?.value||"off";
   if(win==="off"||!latestForecastData)return;
   const src=latestForecastData?.smn96?.ventanas?.[win]||{};
@@ -86,10 +128,10 @@ async function renderForecast(){
     if(seq!==forecastRenderSeq)return;
     if(!feature)continue;
     const color=forecastColor(min,max);
-    const layer=L.geoJSON(feature,{
-      style:{color,weight:2,fillColor:color,fillOpacity:.22,opacity:.9}
-    });
-    const official=feature?.properties?.Nombre_de||feature?.properties?.Nombre_d_1||"Cuenca CONAGUA";
+    const layer=esriFeatureLayer(feature,{color,weight:3,fillColor:color,fillOpacity:.30,opacity:1});
+    if(!layer)continue;
+    const attrs=feature?.attributes||{};
+    const official=attrs.Nombre_de||attrs.Nombre_d_1||"Cuenca CONAGUA";
     layer.bindPopup(`<div class="popup-title">${esc(name)} · SMN</div><div class="popup-grid">
       <b>Ventana</b><span>${esc(win)} h</span>
       <b>Pronóstico</b><span>${forecastLabel(min,max)}</span>
@@ -99,11 +141,17 @@ async function renderForecast(){
       <b>Nota</b><span>Polígono oficial de la cuenca hidrológica CONAGUA que contiene el punto de referencia de la cuenca SMN.</span>
     </div>`);
     layer.addTo(forecastLayer);
+    rendered++;
     const center=layer.getBounds().getCenter();
     L.marker(center,{
       interactive:false,
       icon:L.divIcon({className:"",html:`<div class="forecast-basin-label">${esc(name)} · ${forecastLabel(min,max)}</div>`})
     }).addTo(forecastLayer);
+  }
+  const s=document.getElementById("statusText");
+  if(s&&win!=="off"){
+    const base=s.textContent.replace(/ · Pronóstico:.*$/,"");
+    s.textContent=base+" · Pronóstico: "+rendered+" cuenca(s) visible(s)";
   }
 }
 function parseOfficial(txt){
@@ -261,8 +309,8 @@ async function load(){
  document.getElementById("alertsTable").innerHTML=filtered.length?
  `<table><thead><tr><th>Tipo</th><th>Estación</th><th>Condición</th><th>Dato relevante</th></tr></thead><tbody>${filtered.map(a=>`<tr><td>${esc(a.type)}</td><td><b>${esc(a.name)}</b></td><td>${esc(a.status)}</td><td>${esc(a.detail)}</td></tr>`).join("")}</tbody></table>`:
  "<p>Sin datos relevantes con los criterios actuales.</p>";
- renderForecast();
  document.getElementById("statusText").textContent="Datos consultados del Agente Hidrometeorológico · "+new Date().toLocaleString("es-MX");
+ await renderForecast();
 }
 document.getElementById("refreshBtn").addEventListener("click",load);
 document.getElementById("showLevels").addEventListener("change",e=>e.target.checked?levelLayer.addTo(map):map.removeLayer(levelLayer));
