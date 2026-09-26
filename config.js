@@ -1,0 +1,34 @@
+window.MAP_CONFIG={
+  sourceBase:"/Agente-Hidrometeorologico-Cloud",
+  urls:{
+    levels:"/Agente-Hidrometeorologico-Cloud/data/niveles/Ultimo_Corte/ultimo_resumen.json",
+    rainConagua:"/Agente-Hidrometeorologico-Cloud/data/niveles/Lluvia_CONAGUA/ultimo_corte.json",
+    weather:"/Agente-Hidrometeorologico-Cloud/data/weatherlink/latest.json",
+    weatherExtra:"/Agente-Hidrometeorologico-Cloud/data/weatherlink/extra_latest.json",
+    fuente1:"/Agente-Hidrometeorologico-Cloud/data/latest/FUENTE1.txt"
+  },
+  rainThresholds:[
+    {min:250,level:3,label:"Extraordinaria"},
+    {min:150,level:3,label:"Torrencial"},
+    {min:75,level:2,label:"Intensa"},
+    {min:50,level:1,label:"Muy fuerte"},
+    {min:25,level:1,label:"Fuerte"},
+    {min:0,level:0,label:"Ligera/moderada"}
+  ],
+  // Ubicaciones de referencia para el piloto. Se reemplazarán por coordenadas oficiales.
+  stations:{
+    "Samaria":[18.05,-93.19],"González":[18.03,-92.99],"Oxolotán":[17.38,-92.75],
+    "Tapijulapa":[17.46,-92.78],"Teapa":[17.55,-92.95],"Puyacatengo":[17.55,-92.93],
+    "San Joaquín":[17.52,-93.12],"Pueblo Nuevo":[17.80,-92.88],"Gaviotas":[17.98,-92.92],
+    "Porvenir":[17.98,-92.91],"Macuspana":[17.76,-92.60],"Salto de Agua":[17.56,-92.33],
+    "San Pedro":[17.80,-91.53],"Boca del Cerro":[17.43,-91.49],
+    "PEÑITAS":[17.45,-93.46],"PLATANAR":[17.91,-93.24],"SAMARIA":[18.05,-93.19],
+    "MACUSPANA":[17.76,-92.60],"SALTO DE AGUA":[17.56,-92.33],"OXOLOTÁN":[17.38,-92.75],
+    "TAPIJULAPA":[17.46,-92.78],"TEAPA":[17.55,-92.95],"PUYACATENGO":[17.55,-92.93],
+    "SAN JOAQUÍN":[17.52,-93.12],"PUEBLO NUEVO":[17.80,-92.88],"BOCA DEL CERRO":[17.43,-91.49],
+    "AMATÁN PCIVILCHIAPAS":[17.35,-92.82],"PICHUCALCO PCIVILCHIAPAS":[17.51,-93.12],
+    "CHAPULTENANGO PCIVILCHIAPAS":[17.33,-93.13],"SALTO DE AGUA PCIVILCHIAPAS":[17.56,-92.33],
+    "PALENQUE PCIVILCHIAPAS":[17.51,-91.98],"NAISA 1":[16.52,-90.19],
+    "LAS CRUCES 2 (PETEN)":[16.65,-90.18],"SAN FRANCISCO":[16.80,-89.94]
+  }
+};
