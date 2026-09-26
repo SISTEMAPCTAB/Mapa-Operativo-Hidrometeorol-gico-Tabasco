@@ -7,8 +7,6 @@ on:
     paths:
       - ".github/workflows/build-smn-subcuencas.yml"
       - "data/pronostico-smn-subcuencas.json"
-  schedule:
-    - cron: "20 16 * * *"
 
 permissions:
   contents: write
@@ -20,125 +18,167 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
 
-      - name: Descargar subcuencas RH30 desde CONAGUA
+      - name: Instalar lector geoespacial
+        run: pip install --quiet pyshp pyproj
+
+      - name: Descargar polígonos oficiales INEGI 1:50 000
         run: |
           python - <<'PY'
-          import json, os, requests, datetime
+          import json, os, re, io, zipfile, tempfile, pathlib
+          import requests, shapefile
+          from pyproj import CRS, Transformer
 
-          service = "https://sigagis.conagua.gob.mx/ArcGIS/rest/services/LocREPDA/MapServer/18/query"
           mapping = json.load(open("data/pronostico-smn-subcuencas.json", encoding="utf-8"))
-
-          codes = []
-          zone_by_code = {}
+          wanted = {}
           for zone, cfg in mapping["zonas"].items():
               for sb in cfg.get("subcuencas", []):
-                  code = sb["codigo"]
-                  if code not in codes:
-                      codes.append(code)
-                  zone_by_code.setdefault(code, []).append(zone)
+                  wanted.setdefault(sb["codigo"], {"nombre":sb.get("nombre",sb["codigo"]), "zonas":[]})
+                  wanted[sb["codigo"]]["zonas"].append(zone)
 
-          # En esta capa CLAVE identifica la región hidrológica (RH30).
-          # SUBCUE puede venir como código corto; por ello descargamos RH30 y
-          # normalizamos localmente antes de seleccionar las subcuencas deseadas.
-          payload = {
-              "where": "CLAVE='RH30'",
-              "outFields": "FID,CLAVE,RH,CVE_CUEN,CUENCA,SUBCUE,SUBCUENCA,KM2",
-              "returnGeometry": "true",
-              "f": "json"
+          # UPC oficiales de las cuencas RH30 que contienen las subcuencas seleccionadas.
+          parents = {
+              "RH30A":"702825006939",  # R. Usumacinta
+              "RH30D":"702825006942",  # R. Grijalva - Villahermosa
+              "RH30E":"702825006943",  # R. Grijalva - Tuxtla Gutiérrez
+              "RH30F":"702825006944",  # R. Grijalva - La Concordia
+              "RH30G":"702825006945",  # R. Lacantún
           }
 
-          session = requests.Session()
-          session.headers.update({"User-Agent":"Mozilla/5.0 MapaOperativoIPCET/1.0"})
-          r = session.post(service, data=payload, timeout=35)
-          print("HTTP", r.status_code)
-          r.raise_for_status()
-          data = r.json()
+          api="https://www.inegi.org.mx/app/api/productos/interna_v2/ficha/datos"
+          host="https://www.inegi.org.mx"
+          s=requests.Session()
+          s.headers.update({"User-Agent":"Mozilla/5.0 MapaOperativoIPCET/1.0","Referer":"https://www.inegi.org.mx/app/biblioteca/"})
 
-          if data.get("error"):
-              raise SystemExit("ArcGIS error: " + json.dumps(data["error"], ensure_ascii=False))
+          downloads={}
+          for basin,upc in parents.items():
+              r=s.get(api,params={"upc":upc,"lang":"false"},timeout=30)
+              r.raise_for_status()
+              d=r.json()
+              for parent in (d.get("info") or {}).get("multiarchivos") or []:
+                  for ch in parent.get("hijos") or []:
+                      desc=ch.get("descrip") or ""
+                      m=re.search(r"(RH\d{2}[A-Za-z]{2})",desc)
+                      if not m: continue
+                      code=m.group(1)
+                      if code in wanted:
+                          downloads[code]=host+(ch.get("url") or "")
 
-          features = []
-          found = set()
-          seen_raw = []
-          wanted_set = set(codes)
-          sample_geom = None
+          missing_urls=sorted(set(wanted)-set(downloads))
+          print("URLs encontradas",len(downloads),"de",len(wanted))
+          if missing_urls:
+              print("Sin URL:",missing_urls)
 
-          def normalize_code(attrs):
-              raw = str(attrs.get("SUBCUE") or "").strip()
-              cve = str(attrs.get("CVE_CUEN") or "").strip()
-              if raw.upper().startswith("RH30"):
-                  return raw
-              # Este servicio separa la clave de cuenca (D) y la letra de
-              # subcuenca (h): juntas forman RH30Dh.
-              if len(cve)==1 and len(raw)==1:
-                  return "RH30" + cve + raw
-              # Respaldo para servicios que devuelvan Da, Dh, Ea, etc.
-              if len(raw) in (2,3):
-                  return "RH30" + raw
-              return raw
+          def geom_to_lonlat(reader, shp_path):
+              prj=pathlib.Path(shp_path).with_suffix(".prj")
+              transformer=None
+              if prj.exists():
+                  try:
+                      src=CRS.from_wkt(prj.read_text(errors="ignore"))
+                      if src.to_epsg()!=4326:
+                          transformer=Transformer.from_crs(src,CRS.from_epsg(4326),always_xy=True)
+                  except Exception as e:
+                      print("PRJ no reconocido",shp_path,e)
 
-          for ft in data.get("features") or []:
-              attrs = ft.get("attributes") or {}
-              raw = str(attrs.get("SUBCUE") or "")
-              if raw and len(seen_raw)<25:
-                  seen_raw.append((raw, attrs.get("CVE_CUEN"), attrs.get("SUBCUENCA")))
-              code = normalize_code(attrs)
-              if code not in wanted_set:
-                  continue
-              geom = ft.get("geometry") or {}
-              if sample_geom is None:
-                  sample_geom = {
-                      "attrs": {k: attrs.get(k) for k in ("CLAVE","CVE_CUEN","SUBCUE","SUBCUENCA")},
-                      "geometry_keys": list(geom.keys()),
-                      "rings_len": len(geom.get("rings") or [])
-                  }
-              rings = geom.get("rings") or []
-              if not rings:
-                  continue
-              found.add(code)
-              props = dict(attrs)
-              props["SUBCUE_CANON"] = code
-              features.append({
-                  "type":"Feature",
-                  "properties": {
-                      **props,
-                      "zonas_smn": zone_by_code.get(code, [])
-                  },
-                  "geometry":{
-                      "type":"Polygon",
-                      "coordinates":rings
-                  }
-              })
+              feats=[]
+              fields=[x[0] for x in reader.fields[1:]]
+              for sr in reader.iterShapeRecords():
+                  geom=sr.shape.__geo_interface__
+                  if geom.get("type") not in ("Polygon","MultiPolygon"):
+                      continue
 
-          print("Muestras SUBCUE:", seen_raw)
-          print("Muestra geometría:", sample_geom)
-          print("Solicitadas:", len(codes), "Encontradas:", len(found))
-          print("Faltantes:", sorted(set(codes)-found))
+                  def tx_coords(obj):
+                      if isinstance(obj,(list,tuple)) and len(obj)>=2 and isinstance(obj[0],(int,float)) and isinstance(obj[1],(int,float)):
+                          x,y=obj[0],obj[1]
+                          if transformer:
+                              x,y=transformer.transform(x,y)
+                          return [x,y]
+                      return [tx_coords(x) for x in obj]
 
+                  geom={"type":geom["type"],"coordinates":tx_coords(geom["coordinates"])}
+                  props=dict(zip(fields,list(sr.record)))
+                  feats.append((geom,props))
+              return feats
+
+          features=[]
+          found=set()
+          with tempfile.TemporaryDirectory() as td:
+              for i,(code,url) in enumerate(downloads.items(),1):
+                  print(f"[{i}/{len(downloads)}] {code}")
+                  try:
+                      r=s.get(url,timeout=90)
+                      r.raise_for_status()
+                      z=zipfile.ZipFile(io.BytesIO(r.content))
+                      target=os.path.join(td,code)
+                      os.makedirs(target,exist_ok=True)
+                      z.extractall(target)
+
+                      shp_files=list(pathlib.Path(target).rglob("*.shp"))
+                      polygon_candidates=[]
+                      for shp in shp_files:
+                          try:
+                              rr=shapefile.Reader(str(shp))
+                              if rr.shapeType in (5,15,25,31): # Polygon variants
+                                  polygon_candidates.append((shp,rr))
+                          except Exception:
+                              pass
+
+                      if not polygon_candidates:
+                          print("  SIN POLÍGONO", [p.name for p in shp_files])
+                          continue
+
+                      # El paquete INEGI puede contener red lineal y polígono; elegimos
+                      # el polígono con mayor número de vértices como límite de subcuenca.
+                      best=None
+                      best_score=-1
+                      for shp,rr in polygon_candidates:
+                          score=sum(len(s.points) for s in rr.iterShapes())
+                          if score>best_score:
+                              best=(shp,rr); best_score=score
+
+                      shp,rr=best
+                      polys=geom_to_lonlat(rr,shp)
+                      if not polys:
+                          continue
+
+                      for geom,props in polys:
+                          features.append({
+                              "type":"Feature",
+                              "properties":{
+                                  "SUBCUE":code,
+                                  "SUBCUENCA":wanted[code]["nombre"],
+                                  "zonas_smn":wanted[code]["zonas"],
+                                  "source":"INEGI Red Hidrográfica 1:50 000 edición 2.0"
+                              },
+                              "geometry":geom
+                          })
+                      found.add(code)
+                      print("  OK",shp.name,"polígonos",len(polys))
+                  except Exception as e:
+                      print("  ERROR",code,repr(e))
+
+          print("Subcuencas construidas:",len(found),sorted(found))
+          print("Faltantes:",sorted(set(wanted)-found))
           if not features:
-              raise SystemExit("CONAGUA no devolvió geometrías.")
+              raise SystemExit("No se pudo construir ningún polígono INEGI.")
 
-          out = {
+          out={
               "type":"FeatureCollection",
-              "source":"CONAGUA SIGA / INEGI Cuencas 250 000",
-              "generated_utc":datetime.datetime.now(datetime.timezone.utc).isoformat(),
-              "requested_codes":codes,
-              "found_codes":sorted(found),
+              "source":"INEGI Red Hidrográfica escala 1:50 000, edición 2.0",
               "features":features
           }
-          os.makedirs("data", exist_ok=True)
+          os.makedirs("data",exist_ok=True)
           with open("data/subcuencas-smn.geojson","w",encoding="utf-8") as fp:
               json.dump(out,fp,ensure_ascii=False,separators=(",",":"))
           PY
 
-      - name: Guardar GeoJSON actualizado
+      - name: Guardar GeoJSON oficial local
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/subcuencas-smn.geojson
-          git diff --cached --quiet || git commit -m "Actualiza geometrías locales de subcuencas SMN"
+          git diff --cached --quiet || git commit -m "Actualiza polígonos INEGI de subcuencas SMN"
           git push
