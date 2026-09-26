@@ -177,3 +177,19 @@ main{max-width:1500px;margin:auto;padding:14px}.summary{display:grid;grid-templa
   #map .popup-grid{grid-template-columns:minmax(0,94px) minmax(0,1fr)!important;gap:6px 8px!important}
   #map .popup-grid>b,#map .popup-grid>span{font-size:.79rem!important}
 }
+
+/* Módulo optativo SPR: diseño independiente del mapa y apto para iPhone SE. */
+.spr-panel{border-top:4px solid var(--gold)}
+.spr-panel summary{cursor:pointer;color:var(--wine);font-size:1.12rem;font-weight:800;line-height:1.35}
+.spr-panel summary::marker{color:var(--gold)}
+.spr-tag{display:inline-block;font-size:.7rem;color:#24523d;background:#e4f2e9;padding:3px 8px;border-radius:16px;vertical-align:middle;margin-left:6px}
+.spr-intro{line-height:1.45;font-size:.92rem}
+.spr-stations{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,295px),1fr));gap:8px;margin:12px 0}
+.spr-station{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--line);border-radius:12px;padding:9px 10px;min-width:0}
+.spr-info{display:flex;flex-direction:column;min-width:0;gap:3px}
+.spr-info strong{font-size:.9rem;overflow-wrap:anywhere}
+.spr-info small{font-size:.73rem;line-height:1.3;color:var(--muted);overflow-wrap:anywhere}
+.spr-station a,.spr-links a{display:inline-flex;text-decoration:none;color:#75142f;font-size:.82rem;font-weight:750;border:1px solid #d9c8cf;border-radius:9px;padding:7px 9px;flex:0 0 auto}
+.spr-station a:focus-visible,.spr-links a:focus-visible{outline:3px solid #e2aa3d;outline-offset:2px}
+.spr-links{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+@media(max-width:600px){.spr-panel summary{font-size:.98rem}.spr-station{align-items:flex-start}.spr-station a{font-size:.75rem;max-width:42%;text-align:center;white-space:normal}.spr-tag{margin-left:0}.spr-intro{font-size:.85rem}}
