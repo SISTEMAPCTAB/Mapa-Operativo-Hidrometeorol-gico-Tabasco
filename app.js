@@ -69,58 +69,32 @@ function arcgisJsonp(params){
 async function basinPolygonAt(name,cfg){
   if(forecastGeomCache.has(name))return forecastGeomCache.get(name);
   const [lat,lon]=cfg.center;
+  const params=new URLSearchParams({
+    geometry:`${lon},${lat}`,
+    geometryType:"esriGeometryPoint",
+    inSR:"4326",
+    spatialRel:"esriSpatialRelIntersects",
+    outFields:"*",
+    returnGeometry:"true",
+    outSR:"4326"
+  });
 
-  const makeParams=(wkid,useJsonGeometry=true)=>{
-    const p=new URLSearchParams({
-      where:"1=1",
-      geometryType:"esriGeometryPoint",
-      inSR:String(wkid),
-      spatialRel:"esriSpatialRelIntersects",
-      outFields:"FID,CUENCA,SUBCUENCA,RH,CLAVE,SUBCUE",
-      returnGeometry:"true",
-      outSR:"4326"
-    });
-    if(useJsonGeometry){
-      p.set("geometry",JSON.stringify({x:lon,y:lat,spatialReference:{wkid}}));
-    }else{
-      p.set("geometry",`${lon},${lat}`);
-    }
-    return p;
-  };
-
-  const attempts=[
-    makeParams(4326,true),
-    makeParams(4326,false),
-    // La capa fuente está publicada en NAD27 (EPSG:4267).
-    // Para esta búsqueda puntual, las mismas coordenadas decimales son
-    // suficientemente próximas para identificar el polígono contenedor.
-    makeParams(4267,true),
-    makeParams(4267,false)
-  ];
-
-  for(const params of attempts){
-    try{
-      const r=await fetch(C.conaguaBasinsService+"?"+params.toString()+"&f=json",{cache:"no-store"});
-      if(r.ok){
-        const data=await r.json();
-        const feature=data?.features?.[0]||null;
-        if(feature){
-          forecastGeomCache.set(name,feature);
-          return feature;
-        }
-      }
-    }catch{}
-    try{
-      const data=await arcgisJsonp(params);
+  try{
+    const r=await fetch(C.conaguaBasinsService+"?"+params.toString()+"&f=json",{cache:"no-store"});
+    if(r.ok){
+      const data=await r.json();
       const feature=data?.features?.[0]||null;
-      if(feature){
-        forecastGeomCache.set(name,feature);
-        return feature;
-      }
-    }catch{}
-  }
+      if(feature){forecastGeomCache.set(name,feature);return feature;}
+    }
+  }catch{}
 
-  console.warn("Sin polígono CONAGUA para",name,cfg.center);
+  try{
+    const data=await arcgisJsonp(params);
+    const feature=data?.features?.[0]||null;
+    if(feature){forecastGeomCache.set(name,feature);return feature;}
+  }catch(e){
+    console.warn("No fue posible obtener polígono CONAGUA para",name,e);
+  }
   return null;
 }
 
@@ -152,14 +126,14 @@ async function renderForecast(){
     const layer=esriFeatureLayer(feature,{color,weight:2.5,fillColor:color,fillOpacity:.22,opacity:.95});
     if(!layer)continue;
     const attrs=feature?.attributes||{};
-    const official=attrs.SUBCUENCA||attrs.CUENCA||"Subcuenca CONAGUA/INEGI";
+    const official=attrs.NOMBRE||attrs.NOMBRE_CUE||attrs.Nombre_de||attrs.CUENCA||"Cuenca CONAGUA";
     layer.bindPopup(`<div class="popup-title">${esc(name)} · SMN</div><div class="popup-grid">
       <b>Ventana</b><span>${esc(win)} h</span>
       <b>Pronóstico</b><span>${forecastLabel(min,max)}</span>
-      <b>Subcuenca de referencia</b><span>${esc(official)} · CONAGUA/INEGI</span>
+      <b>Cuenca de referencia</b><span>${esc(official)} · CONAGUA</span>
       <b>Emisión</b><span>${esc(latestForecastData?.smn96?.emision||"s/d")}</span>
       <b>Fecha</b><span>${esc(latestForecastData?.smn96?.fecha||"s/d")}</span>
-      <b>Nota</b><span>La geometría mostrada es una subcuenca oficial CONAGUA/INEGI usada para ubicar mejor la zona operativa del producto SMN; el nombre operativo del pronóstico puede abarcar más de una subcuenca.</span>
+      <b>Nota</b><span>La geometría mostrada es una cuenca oficial CONAGUA usada como referencia espacial para el producto SMN; el nombre operativo del pronóstico puede abarcar una agrupación distinta.</span>
     </div>`);
     layer.bindTooltip(`${esc(name)} · ${forecastLabel(min,max)}`,{
       sticky:true,
