@@ -326,7 +326,24 @@ async function load(){
  document.getElementById("levelDetail").textContent=(Array.isArray(levels)?levels.length:0)+" estaciones de nivel";
  document.getElementById("combinedDetail").textContent="Nivel + tendencia + lluvia ≥50 mm";
 
- alerts.sort((a,b)=>(b.priority||0)-(a.priority||0)||String(a.name).localeCompare(String(b.name),"es"));
+ // Orden de lectura: misma secuencia de sistemas que el Agente de Monitoreo.
+ // Dentro de cada sistema: lluvia asociada y después nivel del río.
+ // SEMAR Alvarado es una referencia costera del Papaloapan, NO del Tonalá.
+ const rainFirst=a=>/lluvia/i.test(a.type||"")?0:1;
+ function systemRank(a){
+   const n=norm(a.name),type=norm(a.type);
+   if(/se mar/.test(n))return 5;
+   if(/sema?r.*alvarado|alvarado/.test(n))return 5; // Fuera de Coatzacoalcos–Tonalá.
+   if(/tonala|san jose del carmen|agua dulce|aguadulcita|tancochapa|zanapa/.test(n))return 0;
+   if(/samaria|gonzalez|carrizal|mezcalapa|platanar|penitas|ostuacan|juarez pcivilchiapas|impulsora|paso la mina|modesta|malpaso/.test(n))return 1;
+   if(/oxolotan|tapijulapa|teapa|puyacatengo|san joaquin|pueblo nuevo|gaviotas|el muelle|porvenir$|amatan|pichucalco|ixhuatan|chapultenango|acala|berriozabal|c ipat|cipat|reforma pcivilchiapas|san cayetano|villahermosa/.test(n))return 2;
+   if(/tulija|puxcatan|chilapa|salto de agua|macuspana|palenque|sinai/.test(n))return 3;
+   if(/usumacinta|boca del cerro|san pedro|el tigre|el porvenir|panzos|playa grande|cahabon|peten|chixoy|coban|mach aquila|machaquila|urrutia|yaxha|chil[oó]n|emiliano zapata/.test(n))return 4;
+   // INSIVUMEH se coloca en Usumacinta salvo estaciones identificadas arriba.
+   if(type.includes("insivumeh"))return 4;
+   return 5; // Referencias externas/sin adscripción validada, sin asociarlas a otra cuenca.
+ }
+ alerts.sort((a,b)=>systemRank(a)-systemRank(b)||rainFirst(a)-rainFirst(b)||(b.priority||0)-(a.priority||0)||String(a.name).localeCompare(String(b.name),"es"));
  const seen=new Set(),filtered=alerts.filter(a=>{const k=[a.type,a.name,a.detail].join("|");if(seen.has(k))return false;seen.add(k);return true});
  document.getElementById("alertsTable").innerHTML=filtered.length?
  `<table><thead><tr><th>Tipo</th><th>Estación</th><th>Condición</th><th>Dato relevante</th></tr></thead><tbody>${filtered.map(a=>`<tr><td>${esc(a.type)}</td><td><b>${esc(a.name)}</b></td><td>${esc(a.status)}</td><td>${esc(a.detail)}</td></tr>`).join("")}</tbody></table>`:
