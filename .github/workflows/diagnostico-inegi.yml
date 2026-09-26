@@ -12,35 +12,25 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Inspeccionar API dinámica de Biblioteca INEGI
+      - name: Consultar API de Biblioteca INEGI
         run: |
           python - <<'PY'
-          import requests,re
-          base="https://www.inegi.org.mx/app/biblioteca/"
-          js=base+"scripts/fichasn_core.min.js?v=2.0.4x"
-          s=requests.Session(); s.headers.update({"User-Agent":"Mozilla/5.0"})
-          r=s.get(js,timeout=30)
-          print("JS",r.status_code,"LEN",len(r.text))
-          txt=r.text
-          pats=[
-            r'https?://[^"\' ]+',
-            r'[^"\']+(?:ajax|api|servicio|service|descarga|download|producto|ficha)[^"\']*',
-            r'\$\.ajax\((.{0,1200})',
-            r'fetch\((.{0,700})'
-          ]
-          for pat in pats:
-              vals=[]
-              for m in re.findall(pat,txt,re.I):
-                  v=m if isinstance(m,str) else str(m)
-                  if v not in vals: vals.append(v)
-              for v in vals[:120]: print("JS_MATCH",v[:1800])
-
-          for kw in ["extFiles_1","linkDescargas","upc","idProducto","archivo","url","Get","Producto"]:
-              pos=0
-              count=0
-              while True:
-                  pos=txt.lower().find(kw.lower(),pos)
-                  if pos<0 or count>=12: break
-                  print("JS_SNIP",kw,txt[max(0,pos-800):pos+1800])
-                  pos+=len(kw); count+=1
+          import requests,json
+          s=requests.Session()
+          s.headers.update({"User-Agent":"Mozilla/5.0","Referer":"https://www.inegi.org.mx/app/biblioteca/"})
+          for upc in ["702825006939","702825006943","889463130314"]:
+              url="https://www.inegi.org.mx/app/api/productos/interna_v2/ficha/datos"
+              r=s.get(url,params={"upc":upc,"lang":"false"},timeout=30)
+              print("\nUPC",upc,"HTTP",r.status_code,"LEN",len(r.text))
+              try:
+                  d=r.json()
+              except Exception:
+                  print(r.text[:2000]); continue
+              print("TOP_KEYS",list(d.keys()))
+              info=d.get("info") or {}
+              print("INFO_KEYS",list(info.keys()))
+              gen=info.get("generales") or {}
+              print("TITULO",gen.get("titulo"))
+              print("FORMATOS",json.dumps(gen.get("formatos"),ensure_ascii=False,indent=2)[:15000])
+              print("MULTI",json.dumps(info.get("multiarchivos"),ensure_ascii=False,indent=2)[:30000])
           PY
