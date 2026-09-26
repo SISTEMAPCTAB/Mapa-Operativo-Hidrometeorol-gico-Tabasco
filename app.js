@@ -52,11 +52,7 @@ function arcgisJsonp(params){
     const cb="__arcgis_"+Date.now()+"_"+Math.random().toString(36).slice(2);
     const script=document.createElement("script");
     const timer=setTimeout(()=>{cleanup();reject(new Error("timeout"));},12000);
-    function cleanup(){
-      clearTimeout(timer);
-      try{delete window[cb]}catch{}
-      script.remove();
-    }
+    function cleanup(){clearTimeout(timer);try{delete window[cb]}catch{}script.remove()}
     window[cb]=(data)=>{cleanup();resolve(data)};
     params.set("f","json");
     params.set("callback",cb);
@@ -66,15 +62,15 @@ function arcgisJsonp(params){
   });
 }
 
-async function basinPolygonAt(name,cfg){
-  if(forecastGeomCache.has(name))return forecastGeomCache.get(name);
-  const [lat,lon]=cfg.center;
+async function basinAtPoint(lat,lon){
+  const key=lat.toFixed(5)+","+lon.toFixed(5);
+  if(forecastGeomCache.has(key))return forecastGeomCache.get(key);
   const params=new URLSearchParams({
     geometry:`${lon},${lat}`,
     geometryType:"esriGeometryPoint",
     inSR:"4326",
     spatialRel:"esriSpatialRelIntersects",
-    outFields:"*",
+    outFields:"FID,CODIGO,TOPONIMO,REG_HID,SUB_HID",
     returnGeometry:"true",
     outSR:"4326"
   });
@@ -82,20 +78,21 @@ async function basinPolygonAt(name,cfg){
   try{
     const r=await fetch(C.conaguaBasinsService+"?"+params.toString()+"&f=json",{cache:"no-store"});
     if(r.ok){
-      const data=await r.json();
-      const feature=data?.features?.[0]||null;
-      if(feature){forecastGeomCache.set(name,feature);return feature;}
+      const d=await r.json();
+      const ft=d?.features?.[0]||null;
+      if(ft){forecastGeomCache.set(key,ft);return ft;}
     }
   }catch{}
 
   try{
-    const data=await arcgisJsonp(params);
-    const feature=data?.features?.[0]||null;
-    if(feature){forecastGeomCache.set(name,feature);return feature;}
-  }catch(e){
-    console.warn("No fue posible obtener polígono CONAGUA para",name,e);
+    const d=await arcgisJsonp(params);
+    const ft=d?.features?.[0]||null;
+    forecastGeomCache.set(key,ft);
+    return ft;
+  }catch{
+    forecastGeomCache.set(key,null);
+    return null;
   }
-  return null;
 }
 
 function esriFeatureLayer(feature,style){
@@ -105,19 +102,37 @@ function esriFeatureLayer(feature,style){
   return L.polygon(latlngs,{...style,pane:"forecastPane"});
 }
 
+async function basinGroup(name,cfg,style){
+  const anchors=Array.isArray(cfg.anchors)&&cfg.anchors.length?cfg.anchors:[cfg.center];
+  const seen=new Set(),layers=[],names=[];
+  for(const [lat,lon] of anchors){
+    const ft=await basinAtPoint(lat,lon);
+    if(!ft)continue;
+    const attrs=ft.attributes||{};
+    const id=String(attrs.CODIGO||attrs.FID||JSON.stringify(ft.geometry).slice(0,80));
+    if(seen.has(id))continue;
+    seen.add(id);
+    const layer=esriFeatureLayer(ft,style);
+    if(layer){
+      layers.push(layer);
+      if(attrs.TOPONIMO)names.push(attrs.TOPONIMO);
+    }
+  }
+  return {layers,names:[...new Set(names)]};
+}
+
 let forecastRenderSeq=0;
 async function renderForecast(){
   const seq=++forecastRenderSeq;
   forecastLayer.clearLayers();
   let rendered=0;
   const win=document.getElementById("forecastWindow")?.value||"off";
-  if(win==="off"||!latestForecastData){
-    const box=document.getElementById("forecastSummary");
-    if(box)box.innerHTML="";
-    return;
-  }
+  const box=document.getElementById("forecastSummary");
+  if(win==="off"||!latestForecastData){if(box)box.innerHTML="";return}
+
   const src=latestForecastData?.smn96?.ventanas?.[win]||{};
   const summary=[];
+
   for(const [name,val] of Object.entries(src)){
     if(seq!==forecastRenderSeq)return;
     const cfg=C.forecastBasins?.[name];
@@ -126,36 +141,35 @@ async function renderForecast(){
     if(!Number.isFinite(max)||max<50)continue;
 
     const color=forecastColor(min,max);
-    const marker=L.marker(cfg.center,{
-      pane:"markerPane",
-      title:name,
-      icon:L.divIcon({
-        className:"",
-        html:`<div class="forecast-diamond" style="background:${color}"></div>`,
-        iconSize:[20,20],
-        iconAnchor:[10,10]
-      })
-    });
+    const group=await basinGroup(name,cfg,{color,weight:2.2,fillColor:color,fillOpacity:.18,opacity:.9});
+    if(seq!==forecastRenderSeq)return;
 
-    marker.bindPopup(`<div class="popup-title">${esc(name)} · SMN</div><div class="popup-grid">
-      <b>Ventana</b><span>${esc(win)} h</span>
-      <b>Pronóstico</b><span>${forecastLabel(min,max)}</span>
-      <b>Emisión</b><span>${esc(latestForecastData?.smn96?.emision||"s/d")}</span>
-      <b>Fecha</b><span>${esc(latestForecastData?.smn96?.fecha||"s/d")}</span>
-      <b>Ubicación</b><span>Punto operativo de referencia de la cuenca SMN.</span>
-      <b>Nota</b><span>No se dibuja un polígono hasta contar con una delimitación oficial equivalente a la zonificación específica usada por este producto SMN.</span>
-    </div>`);
-    marker.bindTooltip(`${esc(name)} · ${forecastLabel(min,max)}`,{
-      direction:"top",
-      className:"forecast-tooltip",
-      opacity:.96
-    });
-    marker.addTo(forecastLayer);
+    if(group.layers.length){
+      const fg=L.featureGroup(group.layers);
+      const hydNames=group.names.length?group.names.join(", "):"cuencas hidrográficas oficiales";
+      fg.bindPopup(`<div class="popup-title">${esc(name)} · SMN</div><div class="popup-grid">
+        <b>Ventana</b><span>${esc(win)} h</span>
+        <b>Pronóstico</b><span>${forecastLabel(min,max)}</span>
+        <b>Base geográfica</b><span>${esc(hydNames)}</span>
+        <b>Fuente geométrica</b><span>INEGI–INE–CONAGUA, escala 1:250 000</span>
+        <b>Emisión</b><span>${esc(latestForecastData?.smn96?.emision||"s/d")}</span>
+        <b>Nota</b><span>Agrupación operativa aproximada de cuencas oficiales para representar la zona del producto SMN; no equivale a una delimitación oficial publicada por el SMN.</span>
+      </div>`);
+      fg.bindTooltip(`${esc(name)} · ${forecastLabel(min,max)}`,{sticky:true,direction:"top",className:"forecast-tooltip",opacity:.96});
+      fg.addTo(forecastLayer);
+      rendered++;
+    }else{
+      // Fallback: do not lose the forecast if a geometry endpoint fails.
+      const marker=L.marker(cfg.center,{
+        title:name,
+        icon:L.divIcon({className:"",html:`<div class="forecast-diamond" style="background:${color}"></div>`,iconSize:[20,20],iconAnchor:[10,10]})
+      }).bindPopup(`<div class="popup-title">${esc(name)} · SMN</div><div class="popup-grid"><b>Ventana</b><span>${esc(win)} h</span><b>Pronóstico</b><span>${forecastLabel(min,max)}</span><b>Geometría</b><span>No disponible; se muestra punto operativo.</span></div>`);
+      marker.addTo(forecastLayer);
+      rendered++;
+    }
     summary.push({name,min,max,color});
-    rendered++;
   }
 
-  const box=document.getElementById("forecastSummary");
   if(box){
     box.innerHTML=summary.length
       ? `<div class="forecast-summary-title">Pronóstico SMN · ${esc(win)} h</div>`+
