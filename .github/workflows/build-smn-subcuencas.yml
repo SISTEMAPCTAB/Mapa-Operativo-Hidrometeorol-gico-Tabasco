@@ -66,6 +66,7 @@ jobs:
           found = set()
           seen_raw = []
           wanted_set = set(codes)
+          sample_geom = None
 
           def normalize_code(attrs):
               raw = str(attrs.get("SUBCUE") or "").strip()
@@ -89,7 +90,14 @@ jobs:
               code = normalize_code(attrs)
               if code not in wanted_set:
                   continue
-              rings = (ft.get("geometry") or {}).get("rings") or []
+              geom = ft.get("geometry") or {}
+              if sample_geom is None:
+                  sample_geom = {
+                      "attrs": {k: attrs.get(k) for k in ("CLAVE","CVE_CUEN","SUBCUE","SUBCUENCA")},
+                      "geometry_keys": list(geom.keys()),
+                      "rings_len": len(geom.get("rings") or [])
+                  }
+              rings = geom.get("rings") or []
               if not rings:
                   continue
               found.add(code)
@@ -108,6 +116,7 @@ jobs:
               })
 
           print("Muestras SUBCUE:", seen_raw)
+          print("Muestra geometría:", sample_geom)
           print("Solicitadas:", len(codes), "Encontradas:", len(found))
           print("Faltantes:", sorted(set(codes)-found))
 
