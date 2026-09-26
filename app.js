@@ -164,11 +164,28 @@ function combined(levelSev,rainSev){
  if(levelSev.level>=1&&rLevel>=2)x=Math.min(3,Math.max(x,levelSev.level+1));
  return{level:x,reasons};
 }
+function namoDistanceText(value){
+ if(!finite(value))return "s/d";
+ const n=Number(value);
+ if(Math.abs(n)<0.005)return "En NAMO (0.00 m)";
+ return n<0?"Faltan "+fmt(-n)+" m para NAMO":"Supera NAMO por "+fmt(n)+" m";
+}
+function levelObservedText(r){
+ const ts=r.ultima_actualizacion_real||r.fecha_hora;
+ if(!ts)return "s/d";
+ const d=new Date(ts);
+ const shown=Number.isNaN(d.getTime())?String(ts):d.toLocaleString("es-MX",{timeZone:"America/Mexico_City",day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",hour12:false});
+ return shown+(r.estado_dato==="heredado"?" · último dato válido conservado":"");
+}
 function popupLevel(r,off,sev,rain){
  return `<div class="popup-title">${esc(r.estacion)}</div><div class="popup-grid">
  <b>Río</b><span>${esc(r.rio)}</span><b>Nivel</b><span>${fmt(r.ultimo_nivel)} m</span>
- <b>Tendencia</b><span>${esc(r.tendencia||"s/d")}</span><b>Δ reporte</b><span>${fmt(r.delta_reporte)} m</span>
- <b>Δ24 h</b><span>${fmt(r.delta_24h)} m</span><b>Crítico</b><span>${off?fmt(off.critical)+" m":"s/d"}</span>
+ <b>Lectura real</b><span>${esc(levelObservedText(r))}</span>
+ <b>Tendencia</b><span>${esc(r.tendencia||"s/d")}</span>
+ <b>Δ reporte anterior</b><span>${fmt(r.delta_reporte)} m · desde la lectura válida previa</span>
+ <b>Δ24 h</b><span>${fmt(r.delta_24h)} m · respecto de 24 h atrás</span>
+ <b>Diferencia al NAMO</b><span><strong>${esc(namoDistanceText(r.distancia_namo))}</strong></span>
+ <b>Crítico</b><span>${off?fmt(off.critical)+" m":"s/d"}</span>
  <b>Desbordamiento</b><span>${off?fmt(off.overflow)+" m":"s/d"}</span><b>Lluvia en estación</b><span>${rain?fmt(rain.mm,1)+" mm · "+esc(rain.source)+" · "+esc(rain.period):"s/d"}</span>
  <b>Alerta operativa</b><span><strong>${sev.level<0?"Sin dato":LEVEL_LABELS[sev.level]}</strong></span>
  <b>Razón</b><span>${esc(sev.reasons.join(" · ")||"seguimiento ordinario")}</span></div>`;
@@ -196,7 +213,7 @@ function isChiapasOrGuatemala(r){
 }
 function insLevelRows(doc){
  return (doc?.estaciones||[]).filter(x=>x.estado_dato==="observado"&&finite(x.nivel_instantaneo_m)).map(x=>({
-   type:"INSIVUMEH nivel",name:x.estacion,status:"Monitoreo",detail:`${fmt(x.nivel_instantaneo_m,2)} m · ${esc(x.rio||"río s/d")} · ${esc(x.ubicacion||"Guatemala")}`,priority:1
+   type:"INSIVUMEH nivel",name:x.estacion,status:"Monitoreo",detail:`${fmt(x.nivel_instantaneo_m,2)} m · NAMO: s/d (sin referencia homologada) · ${esc(x.rio||"río s/d")} · ${esc(x.ubicacion||"Guatemala")}`,priority:1
  }));
 }
 function insRainRows(doc){
@@ -246,7 +263,7 @@ async function load(){
    const ls=levelSeverity(r,off.get(norm(r.estacion))),near=stationRainForLevel(r,rains),cs=combined(ls,near);
    maxLevel=Math.max(maxLevel,ls.level);maxCombined=Math.max(maxCombined,cs.level);
    L.marker(p,{icon:levelDot(cs.level),title:r.estacion}).bindPopup(popupLevel(r,off.get(norm(r.estacion)),cs,near)).addTo(levelLayer);
-   if(cs.level>=1)alerts.push({type:"Río",name:r.estacion,status:LEVEL_LABELS[cs.level],detail:cs.reasons.join(" · "),priority:5+cs.level});
+   if(cs.level>=1)alerts.push({type:"Río",name:r.estacion,status:LEVEL_LABELS[cs.level],detail:"Nivel "+fmt(r.ultimo_nivel)+" m · NAMO: "+namoDistanceText(r.distancia_namo)+" · "+(cs.reasons.join(" · ")||"seguimiento"),priority:5+cs.level});
  }
 
  // Niveles INSIVUMEH observados: visibles en la capa Aguas arriba.
@@ -271,6 +288,7 @@ async function load(){
      <b>Río</b><span>${esc(r.rio||"s/d")}</span>
      <b>Ubicación</b><span>${esc(r.ubicacion||"Guatemala")}</span>
      <b>Nivel</b><span>${fmt(r.nivel_instantaneo_m,2)} m</span>
+     <b>Diferencia al NAMO</b><span>s/d · fuente sin NAMO homologado</span>
      <b>Referencia máx.</b><span>${maxRef===null?"s/d":fmt(maxRef,2)+" m"}</span>
      <b>Caudal</b><span>${finite(r.caudal_instantaneo_m3s)?fmt(r.caudal_instantaneo_m3s,2)+" m³/s":"s/d"}</span>
      <b>Dato</b><span>${esc(r.ultima_observacion_fuente||"s/d")}</span>
