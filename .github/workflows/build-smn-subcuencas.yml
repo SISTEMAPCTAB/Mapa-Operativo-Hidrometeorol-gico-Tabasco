@@ -72,13 +72,13 @@ jobs:
               cve = str(attrs.get("CVE_CUEN") or "").strip()
               if raw.upper().startswith("RH30"):
                   return raw
-              # Algunos servicios guardan la clave como Da, Dh, Ea, etc.
-              if len(raw) in (1,2,3):
+              # Este servicio separa la clave de cuenca (D) y la letra de
+              # subcuenca (h): juntas forman RH30Dh.
+              if len(cve)==1 and len(raw)==1:
+                  return "RH30" + cve + raw
+              # Respaldo para servicios que devuelvan Da, Dh, Ea, etc.
+              if len(raw) in (2,3):
                   return "RH30" + raw
-              # Otros separan cuenca (D) y subcuenca (h).
-              if cve and raw and not raw.upper().startswith("RH"):
-                  if len(cve)==1 and len(raw)==1:
-                      return "RH30" + cve + raw
               return raw
 
           for ft in data.get("features") or []:
