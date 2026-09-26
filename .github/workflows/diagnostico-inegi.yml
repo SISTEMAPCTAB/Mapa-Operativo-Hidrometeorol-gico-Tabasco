@@ -12,25 +12,27 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Consultar API de Biblioteca INEGI
+      - name: Identificar cuencas RH30 y descargas
         run: |
           python - <<'PY'
-          import requests,json
+          import requests
           s=requests.Session()
           s.headers.update({"User-Agent":"Mozilla/5.0","Referer":"https://www.inegi.org.mx/app/biblioteca/"})
-          for upc in ["702825006939","702825006943","889463130314"]:
-              url="https://www.inegi.org.mx/app/api/productos/interna_v2/ficha/datos"
-              r=s.get(url,params={"upc":upc,"lang":"false"},timeout=30)
-              print("\nUPC",upc,"HTTP",r.status_code,"LEN",len(r.text))
-              try:
-                  d=r.json()
-              except Exception:
-                  print(r.text[:2000]); continue
-              print("TOP_KEYS",list(d.keys()))
+          api="https://www.inegi.org.mx/app/api/productos/interna_v2/ficha/datos"
+          for n in range(6938,6950):
+              upc="70282500"+str(n)
+              r=s.get(api,params={"upc":upc,"lang":"false"},timeout=20)
+              if not r.ok: continue
+              try:d=r.json()
+              except:continue
+              if not d.get("success"): continue
               info=d.get("info") or {}
-              print("INFO_KEYS",list(info.keys()))
               gen=info.get("generales") or {}
-              print("TITULO",gen.get("titulo"))
-              print("FORMATOS",json.dumps(gen.get("formatos"),ensure_ascii=False,indent=2)[:15000])
-              print("MULTI",json.dumps(info.get("multiarchivos"),ensure_ascii=False,indent=2)[:30000])
+              title=gen.get("titulo") or ""
+              if "Red hidrográfica" not in title: continue
+              print("UPC",upc,"TITLE",title)
+              multi=info.get("multiarchivos") or []
+              for parent in multi:
+                  for ch in parent.get("hijos") or []:
+                      print(" CHILD",ch.get("descrip"),"URL",ch.get("url"))
           PY
