@@ -232,7 +232,7 @@ function isChiapasOrGuatemala(r){
 }
 function insLevelRows(doc){
  return (doc?.estaciones||[]).filter(x=>x.estado_dato==="observado"&&finite(x.nivel_instantaneo_m)).map(x=>({
-   type:"INSIVUMEH nivel",name:x.estacion,status:"Monitoreo",detail:`${fmt(x.nivel_instantaneo_m,2)} m · NAMO: s/d (sin referencia homologada) · ${esc(x.rio||"río s/d")} · ${esc(x.ubicacion||"Guatemala")}`,priority:1
+   type:"INSIVUMEH nivel",name:x.estacion,river:x.rio||null,status:"Monitoreo",detail:`${fmt(x.nivel_instantaneo_m,2)} m · NAMO: s/d (sin referencia homologada) · ${esc(x.rio||"río s/d")} · ${esc(x.ubicacion||"Guatemala")}`,priority:1
  }));
 }
 function insRainRows(doc){
@@ -282,7 +282,7 @@ async function load(){
    const ls=levelSeverity(r,off.get(norm(r.estacion))),near=stationRainForLevel(r,rains),cs=combined(ls,near);
    maxLevel=Math.max(maxLevel,ls.level);maxCombined=Math.max(maxCombined,cs.level);
    L.marker(p,{icon:levelDot(cs.level),title:r.estacion}).bindPopup(popupLevel(r,off.get(norm(r.estacion)),cs,near)).addTo(levelLayer);
-   if(cs.level>=1)alerts.push({type:"Río",name:r.estacion,status:LEVEL_LABELS[cs.level],detail:"Nivel "+fmt(r.ultimo_nivel)+" m · NAMO: "+namoDistanceText(r.distancia_namo)+" · "+(cs.reasons.join(" · ")||"seguimiento"),priority:5+cs.level});
+   if(cs.level>=1)alerts.push({type:"Río",name:r.estacion,river:r.rio||null,status:LEVEL_LABELS[cs.level],detail:"Nivel "+fmt(r.ultimo_nivel)+" m · NAMO: "+namoDistanceText(r.distancia_namo)+" · "+(cs.reasons.join(" · ")||"seguimiento"),priority:5+cs.level});
  }
 
  // Niveles INSIVUMEH observados: visibles en la capa Aguas arriba.
@@ -346,7 +346,7 @@ async function load(){
  alerts.sort((a,b)=>systemRank(a)-systemRank(b)||rainFirst(a)-rainFirst(b)||(b.priority||0)-(a.priority||0)||String(a.name).localeCompare(String(b.name),"es"));
  const seen=new Set(),filtered=alerts.filter(a=>{const k=[a.type,a.name,a.detail].join("|");if(seen.has(k))return false;seen.add(k);return true});
  document.getElementById("alertsTable").innerHTML=filtered.length?
- `<table><thead><tr><th>Tipo</th><th>Estación</th><th>Condición</th><th>Dato relevante</th></tr></thead><tbody>${filtered.map(a=>`<tr><td>${esc(a.type)}</td><td><b>${esc(a.name)}</b></td><td>${esc(a.status)}</td><td>${esc(a.detail)}</td></tr>`).join("")}</tbody></table>`:
+ `<table><thead><tr><th>Tipo</th><th>Estación</th><th>Condición</th><th>Dato relevante</th></tr></thead><tbody>${filtered.map(a=>`<tr><td>${esc(a.type)}</td><td><b>${esc(a.name)}</b>${a.river?`<br><small class="muted">Río: ${esc(a.river)}</small>`:""}</td><td>${esc(a.status)}</td><td>${esc(a.detail)}</td></tr>`).join("")}</tbody></table>`:
  "<p>Sin datos relevantes con los criterios actuales.</p>";
  document.getElementById("statusText").textContent="Datos consultados del Agente Hidrometeorológico · "+new Date().toLocaleString("es-MX");
  await renderForecast();
