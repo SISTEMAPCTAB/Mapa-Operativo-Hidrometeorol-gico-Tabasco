@@ -1,0 +1,116 @@
+{
+  "version": "2026-09-26",
+  "fuente_base": "INEGI Red Hidrográfica / Carta Hidrológica de Aguas Superficiales RH30",
+  "criterio": "Las zonas SMN se representarán mediante unión de subcuencas RH30. No se dibuja una zona completa hasta contar con geometrías oficiales de todos sus códigos confirmados.",
+  "zonas": {
+    "Bajo Grijalva-Ríos de la Sierra": {
+      "status": "confirmado_parcial",
+      "subcuencas_confirmadas": [
+        {
+          "codigo": "RH30Dh",
+          "nombre": "R. Pichucalco"
+        },
+        {
+          "codigo": "RH30Di",
+          "nombre": "R. de la Sierra"
+        },
+        {
+          "codigo": "RH30Dj",
+          "nombre": "R. Tacotalpa"
+        },
+        {
+          "codigo": "RH30Dn",
+          "nombre": "R. Puxcatán"
+        },
+        {
+          "codigo": "RH30Do",
+          "nombre": "R. Macuspana"
+        },
+        {
+          "codigo": "RH30Dr",
+          "nombre": "R. Tulijá"
+        },
+        {
+          "codigo": "RH30Dt",
+          "nombre": "R. Chilapa"
+        },
+        {
+          "codigo": "RH30Dw",
+          "nombre": "R. Carrizal"
+        },
+        {
+          "codigo": "RH30Dx",
+          "nombre": "R. Samaria"
+        }
+      ]
+    },
+    "Usumacinta": {
+      "status": "confirmado_parcial",
+      "subcuencas_confirmadas": [
+        {
+          "codigo": "RH30Aa",
+          "nombre": "R. Usumacinta"
+        },
+        {
+          "codigo": "RH30Ab",
+          "nombre": "R. San Pedro"
+        },
+        {
+          "codigo": "RH30Ae",
+          "nombre": "R. Chacamax"
+        },
+        {
+          "codigo": "RH30Af",
+          "nombre": "R. Chacaljá"
+        },
+        {
+          "codigo": "RH30Ba",
+          "nombre": "R. Chixoy"
+        },
+        {
+          "codigo": "RH30Ga",
+          "nombre": "R. Lacantún"
+        }
+      ]
+    },
+    "Chicoasén": {
+      "status": "confirmado",
+      "subcuencas_confirmadas": [
+        {
+          "codigo": "RH30Ed",
+          "nombre": "R. Chicoasén"
+        }
+      ]
+    },
+    "Malpaso": {
+      "status": "confirmado_nucleo",
+      "subcuencas_confirmadas": [
+        {
+          "codigo": "RH30Ea",
+          "nombre": "P. Netzahualcóyotl"
+        }
+      ],
+      "nota": "Se incorporarán tributarias adicionales sólo al confirmar su correspondencia operativa con la zona SMN Malpaso."
+    },
+    "La Angostura": {
+      "status": "confirmado_nucleo",
+      "subcuencas_confirmadas": [
+        {
+          "codigo": "RH30Fa",
+          "nombre": "P. La Angostura"
+        }
+      ],
+      "nota": "Se incorporarán tributarias adicionales sólo al confirmar su correspondencia operativa con la zona SMN La Angostura."
+    },
+    "Peñitas": {
+      "status": "pendiente_equivalencia",
+      "subcuencas_confirmadas": [],
+      "nota": "No se asignará un polígono hasta confirmar qué subcuencas RH30 usa la zona operativa SMN Peñitas."
+    },
+    "Presa Juan Sabines": {
+      "status": "pendiente_equivalencia",
+      "subcuencas_confirmadas": [],
+      "nota": "No se asignará un polígono hasta confirmar la equivalencia exacta con subcuencas RH30."
+    }
+  }
+}
