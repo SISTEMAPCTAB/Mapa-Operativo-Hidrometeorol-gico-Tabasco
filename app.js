@@ -69,38 +69,59 @@ function arcgisJsonp(params){
 async function basinPolygonAt(name,cfg){
   if(forecastGeomCache.has(name))return forecastGeomCache.get(name);
   const [lat,lon]=cfg.center;
-  const params=new URLSearchParams({
-    geometry:`${lon},${lat}`,
-    geometryType:"esriGeometryPoint",
-    inSR:"4326",
-    spatialRel:"esriSpatialRelIntersects",
-    outFields:"FID,CUENCA,SUBCUENCA,RH,CLAVE,SUBCUE",
-    returnGeometry:"true",
-    outSR:"4326"
-  });
 
-  // Intento normal (CORS). Si el servidor no autoriza CORS,
-  // se usa JSONP, soportado por ArcGIS REST, para que GitHub Pages
-  // pueda obtener el polígono oficial sin proxy.
-  try{
-    const r=await fetch(C.conaguaBasinsService+"?"+params.toString()+"&f=json",{cache:"force-cache"});
-    if(r.ok){
-      const data=await r.json();
-      const feature=data?.features?.[0]||null;
-      if(feature){forecastGeomCache.set(name,feature);return feature;}
+  const makeParams=(wkid,useJsonGeometry=true)=>{
+    const p=new URLSearchParams({
+      where:"1=1",
+      geometryType:"esriGeometryPoint",
+      inSR:String(wkid),
+      spatialRel:"esriSpatialRelIntersects",
+      outFields:"FID,CUENCA,SUBCUENCA,RH,CLAVE,SUBCUE",
+      returnGeometry:"true",
+      outSR:"4326"
+    });
+    if(useJsonGeometry){
+      p.set("geometry",JSON.stringify({x:lon,y:lat,spatialReference:{wkid}}));
+    }else{
+      p.set("geometry",`${lon},${lat}`);
     }
-  }catch{}
+    return p;
+  };
 
-  try{
-    const data=await arcgisJsonp(params);
-    const feature=data?.features?.[0]||null;
-    forecastGeomCache.set(name,feature);
-    return feature;
-  }catch(e){
-    console.warn("No fue posible obtener polígono CONAGUA para",name,e);
-    forecastGeomCache.set(name,null);
-    return null;
+  const attempts=[
+    makeParams(4326,true),
+    makeParams(4326,false),
+    // La capa fuente está publicada en NAD27 (EPSG:4267).
+    // Para esta búsqueda puntual, las mismas coordenadas decimales son
+    // suficientemente próximas para identificar el polígono contenedor.
+    makeParams(4267,true),
+    makeParams(4267,false)
+  ];
+
+  for(const params of attempts){
+    try{
+      const r=await fetch(C.conaguaBasinsService+"?"+params.toString()+"&f=json",{cache:"no-store"});
+      if(r.ok){
+        const data=await r.json();
+        const feature=data?.features?.[0]||null;
+        if(feature){
+          forecastGeomCache.set(name,feature);
+          return feature;
+        }
+      }
+    }catch{}
+    try{
+      const data=await arcgisJsonp(params);
+      const feature=data?.features?.[0]||null;
+      if(feature){
+        forecastGeomCache.set(name,feature);
+        return feature;
+      }
+    }catch{}
   }
+
+  console.warn("Sin polígono CONAGUA para",name,cfg.center);
+  return null;
 }
 
 function esriFeatureLayer(feature,style){
@@ -130,11 +151,6 @@ async function renderForecast(){
     const color=forecastColor(min,max);
     const layer=esriFeatureLayer(feature,{color,weight:2.5,fillColor:color,fillOpacity:.22,opacity:.95});
     if(!layer)continue;
-    const ref=L.latLng(cfg.center[0],cfg.center[1]);
-    if(!layer.getBounds().contains(ref)){
-      console.warn("Polígono descartado por no contener su referencia SMN:",name);
-      continue;
-    }
     const attrs=feature?.attributes||{};
     const official=attrs.SUBCUENCA||attrs.CUENCA||"Subcuenca CONAGUA/INEGI";
     layer.bindPopup(`<div class="popup-title">${esc(name)} · SMN</div><div class="popup-grid">
