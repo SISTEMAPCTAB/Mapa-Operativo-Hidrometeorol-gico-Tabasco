@@ -48,7 +48,6 @@ jobs:
               "where": "CLAVE='RH30'",
               "outFields": "FID,CLAVE,RH,CVE_CUEN,CUENCA,SUBCUE,SUBCUENCA,KM2",
               "returnGeometry": "true",
-              "outSR": "4326",
               "f": "json"
           }
 
