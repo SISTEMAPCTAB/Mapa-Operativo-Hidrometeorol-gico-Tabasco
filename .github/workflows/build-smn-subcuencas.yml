@@ -120,7 +120,7 @@ jobs:
                       polygon_candidates=[]
                       for shp in shp_files:
                           try:
-                              rr=shapefile.Reader(str(shp))
+                              rr=shapefile.Reader(str(shp),encoding="latin1",encodingErrors="replace")
                               if rr.shapeType in (5,15,25,31): # Polygon variants
                                   polygon_candidates.append((shp,rr))
                           except Exception:
@@ -130,16 +130,15 @@ jobs:
                           print("  SIN POLÍGONO", [p.name for p in shp_files])
                           continue
 
-                      # El paquete INEGI puede contener red lineal y polígono; elegimos
-                      # el polígono con mayor número de vértices como límite de subcuenca.
-                      best=None
-                      best_score=-1
-                      for shp,rr in polygon_candidates:
-                          score=sum(len(s.points) for s in rr.iterShapes())
-                          if score>best_score:
-                              best=(shp,rr); best_score=score
-
-                      shp,rr=best
+                      # Los ZIP de INEGI incluyen varias capas poligonales (_ha, etc.).
+                      # La capa terminada en _subc es el límite de la subcuenca y es la que
+                      # debe publicarse; no usar polígonos internos de áreas hidrográficas.
+                      preferred=[x for x in polygon_candidates if "_subc" in x[0].stem.lower()]
+                      if preferred:
+                          shp,rr=preferred[0]
+                      else:
+                          # Respaldo: elegir la capa con menos entidades, normalmente el límite.
+                          shp,rr=min(polygon_candidates,key=lambda x: len(x[1]))
                       polys=geom_to_lonlat(rr,shp)
                       if not polys:
                           continue
