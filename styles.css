@@ -108,3 +108,18 @@ main{max-width:1500px;margin:auto;padding:14px}.summary{display:grid;grid-templa
   .forecast-summary-row{display:flex;flex-wrap:nowrap;min-width:0}
   .forecast-summary-row > span:last-child{min-width:0;overflow-wrap:anywhere}
 }
+
+/* Corrección de cabecera y atribución cartográfica para iPhone SE / Safari. */
+#map{position:relative;isolation:isolate}
+#map .leaflet-control-container{position:absolute;inset:0;pointer-events:none}
+#map .leaflet-control-container .leaflet-control{pointer-events:auto}
+#map .leaflet-bottom.leaflet-right{position:absolute;right:0;bottom:0}
+#map .leaflet-control-attribution{max-width:100%;white-space:normal;overflow-wrap:anywhere;font-size:10px;line-height:1.2}
+@media(max-width:600px){
+  .topbar{position:relative;z-index:1000;display:flex;flex-wrap:wrap;align-items:flex-start;gap:10px;padding:12px 14px}
+  .topbar>div{flex:1 1 100%;width:100%;min-width:0}
+  .topbar h1,.topbar #statusText{overflow-wrap:anywhere;word-break:normal}
+  .topbar #statusText{font-size:.81rem;line-height:1.35}
+  .topbar #refreshBtn{flex:none;margin-left:auto;padding:8px 12px;font-size:.85rem}
+  #map .leaflet-control-attribution{font-size:9px;padding:2px 4px;background:rgba(255,255,255,.88)}
+}
