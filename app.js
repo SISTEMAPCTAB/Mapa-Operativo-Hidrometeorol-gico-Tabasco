@@ -9,11 +9,6 @@ map.getPane("forecastPane").style.zIndex=450;
 map.getPane("forecastPane").style.pointerEvents="auto";
 const levelLayer=L.layerGroup().addTo(map),rainLayer=L.layerGroup().addTo(map),upstreamLayer=L.layerGroup().addTo(map),forecastLayer=L.layerGroup().addTo(map),sprLayer=L.layerGroup();
 let latestForecastData=null;
-const sprLayer=L.layerGroup();
-const sprCatalogUrl="data/spr-bajo-grijalva.json";
-const sprOfficialUrl="https://app.conagua.gob.mx/spr/bajogrijalva.html";
-const sprPrecipUrl="https://app.conagua.gob.mx/spr/pronosticogasir.html";
-const sprNames=["Tapijulapa","Samaria","González","San Joaquín","Gaviotas","Censo","Sabanilla","Porvenir","Platanar","Pueblo Nuevo","Puyacatengo","Teapa","Grijalva"];
 
 
 
@@ -229,66 +224,44 @@ function insRainRows(doc){
  });
 }
 
-function renderSprDirectory(){
- const host=document.getElementById("sprDirectory");
- if(!host)return;
- host.innerHTML=sprNames.map(name=>{
-   const p=coord(name);
-   const loc=p?"Referencia cartográfica; validar coordenadas oficiales":"Ubicación no verificada; sin marcador";
-   return `<tr><td><b>${esc(name)}</b></td><td>${esc(loc)}</td><td>Sin extracción numérica validada</td><td><a href="${sprOfficialUrl}" target="_blank" rel="noopener noreferrer">Consultar CONAGUA ↗</a></td></tr>`;
- }).join("");
- const status=document.getElementById("sprStatus");
- if(status)status.textContent="Consulta independiente · 13 puntos oficiales · sin pronóstico numérico automatizado verificado. Verifique fecha de emisión en CONAGUA.";
-}
-function renderSprMarkers(){
- sprLayer.clearLayers();
- sprNames.forEach(name=>{
-  const p=coord(name);
-  if(!p)return;
-  const label=`<div class="popup-title">${esc(name)} · SPR CONAGUA</div><div class="spr-popup">
-   <p>Referencia cartográfica de la estación. No representa un pronóstico numérico vigente ni altera el semáforo operativo.</p>
-   <p><b>Fecha de emisión:</b> por verificar en fuente oficial.</p>
-   <a href="${sprOfficialUrl}" target="_blank" rel="noopener noreferrer">Consultar el pronóstico oficial ↗</a></div>`;
-  L.circleMarker(p,{radius:8,color:"#532c81",weight:2,fillColor:"#fff",fillOpacity:1})
-   .bindPopup(label).addTo(sprLayer);
- });
-}
-renderSprDirectory();
-renderSprMarkers();
-document.getElementById("showSpr").addEventListener("change",e=>e.target.checked?sprLayer.addTo(map):map.removeLayer(sprLayer));
 let sprCatalog=null;
+let sprHealth=null;
+function sprHealthLabel(){
+ if(!sprHealth?.checked_at)return "Pendiente de verificación automática";
+ const d=new Date(sprHealth.checked_at);
+ const when=Number.isNaN(+d)?sprHealth.checked_at:d.toLocaleString("es-MX",{timeZone:"America/Mexico_City"});
+ const states=(sprHealth.sources||[]).map(s=>s.name+": "+(s.http_ok?"portal accesible":"sin respuesta válida")).join(" · ");
+ return "Última comprobación: "+when+" · "+states+" · Accesibilidad NO confirma pronóstico vigente.";
+}
 function drawSPR(doc){
  sprLayer.clearLayers();
- const panel=document.getElementById("sprPanel");
  const on=document.getElementById("showSPR")?.checked;
- if(panel)panel.hidden=!on;
+ const status=document.getElementById("sprStatus");
+ const health=document.getElementById("sprHealth");
+ if(health)health.textContent=sprHealthLabel();
+ if(status)status.textContent=(doc?.puntos?.length||0)+" puntos del SPR: enlaces oficiales de consulta; cifras y emisión sin extracción automática validada.";
  if(!on)return;
  const list=Array.isArray(doc?.puntos)?doc.puntos:[];
- const directory=document.getElementById("sprDirectory");
- const status=document.getElementById("sprStatus");
- const url=doc?.url||"https://app.conagua.gob.mx/spr/bajogrijalva.html";
- const safeUrl=url==="https://app.conagua.gob.mx/spr/bajogrijalva.html"?url:"https://app.conagua.gob.mx/spr/bajogrijalva.html";
- if(status)status.textContent=list.length+" puntos oficiales del Bajo Grijalva · pronóstico numérico automático aún no validado.";
- if(directory)directory.innerHTML=list.map(x=>'<span class="spr-item">'+esc(x.nombre)+' · <small>Consulta oficial; sin dato estructurado verificado</small></span>').join("");
  for(const x of list){
    const p=coord(x.nombre);
    if(!p)continue;
-   L.circleMarker(p,{radius:7,color:"#275b88",weight:2,fillColor:"#fff",fillOpacity:1})
-    .bindPopup('<div class="popup-title">'+esc(x.nombre)+' · SPR CONAGUA</div><p>Pronóstico numérico: sin dato estructurado verificado.</p><p>Fecha de emisión: s/d.</p><a href="'+safeUrl+'" target="_blank" rel="noopener noreferrer">Abrir pronóstico oficial del Bajo Grijalva</a>')
-    .addTo(sprLayer);
+   const target=x.region==="Golfo Centro"?"https://app.conagua.gob.mx/spr/gc.html":"https://app.conagua.gob.mx/spr/bajogrijalva.html";
+   const popup='<div class="popup-title">'+esc(x.nombre)+' · SPR CONAGUA</div><p>Consulta de referencia. Pronóstico numérico y fecha de emisión no verificados automáticamente.</p><p>Estado del portal: '+esc(sprHealthLabel())+'</p><a href="'+target+'" target="_blank" rel="noopener noreferrer">Abrir directorio oficial ↗</a>';
+   L.circleMarker(p,{radius:7,color:"#532c81",weight:2,fillColor:"#fff",fillOpacity:1}).bindPopup(popup).addTo(sprLayer);
  }
  if(!map.hasLayer(sprLayer))sprLayer.addTo(map);
 }
 async function load(){
  document.getElementById("statusText").textContent="Actualizando…";
- const [levels,rainCon,weather,extra,f1,insRain,insLevels,publicSources,mapping,geojson,spr]=await Promise.all([
+ const [levels,rainCon,weather,extra,f1,insRain,insLevels,publicSources,mapping,geojson,spr,health]=await Promise.all([
    fetchJSON(C.urls.levels),fetchJSON(C.urls.rainConagua),fetchJSON(C.urls.weather),fetchJSON(C.urls.weatherExtra),
-   fetchText(C.urls.fuente1),fetchJSON(C.urls.insivumehRain),fetchJSON(C.urls.insivumehLevels),fetchJSON(C.urls.publicSources),fetchJSON(C.urls.forecastMapping),fetchJSON(C.urls.forecastGeojson),fetchJSON(C.urls.sprCatalog)
+   fetchText(C.urls.fuente1),fetchJSON(C.urls.insivumehRain),fetchJSON(C.urls.insivumehLevels),fetchJSON(C.urls.publicSources),fetchJSON(C.urls.forecastMapping),fetchJSON(C.urls.forecastGeojson),fetchJSON(C.urls.sprCatalog),fetchJSON(C.urls.sprHealth)
  ]);
  latestForecastData=publicSources;
  forecastMapping=mapping;
  forecastGeojson=geojson;
  sprCatalog=spr;
+ sprHealth=health;
  const off=parseOfficial(f1),rains=[];
  for(const r of Array.isArray(rainCon)?rainCon:[]){
    if(finite(r.lluvia_hoy_desde_08_mm))rains.push({name:r.estacion,source:"CONAGUA",mm:+r.lluvia_hoy_desde_08_mm,time:r.fecha_hora,period:"HOY desde 08:00",location:"Tabasco/Chiapas"});
