@@ -57,7 +57,6 @@
       <label><input type="checkbox" id="showRain" checked> Lluvia</label>
       <label><input type="checkbox" id="showUpstream" checked> Aguas arriba</label>
       <label><input type="checkbox" id="showSPR"> Pronóstico de ríos CONAGUA (SPR)</label>
-      <label><input type="checkbox" id="showSpr"> Pronóstico hidrológico CONAGUA (SPR)</label>
       <label class="forecast-control">Pronóstico SMN
         <select id="forecastWindow" aria-label="Ventana de pronóstico SMN">
           <option value="off">Oculto</option>
@@ -81,37 +80,18 @@
       </aside>
     </div>
 
-    <section class="panel spr-panel" aria-labelledby="sprTitle">
-      <details id="sprPanel">
-        <summary id="sprTitle">Pronóstico hidrológico CONAGUA · Bajo Grijalva <span class="spr-tag">Consulta oficial</span></summary>
-        <p class="spr-intro">Complemento del Sistema de Pronóstico en Ríos (SPR). Consulte las gráficas en CONAGUA y verifique su fecha de emisión. Los valores pronosticados no se mezclan con niveles observados, Δ24 h, NAMO ni semáforo del mapa.</p>
-        <p id="sprSourceStatus" class="footnote">Preparando directorio de los 13 puntos oficiales…</p>
-        <div id="sprStations" class="spr-stations" aria-label="Puntos de pronóstico Bajo Grijalva"></div>
-        <div class="spr-links">
-          <a href="https://app.conagua.gob.mx/spr/bajogrijalva.html" target="_blank" rel="noopener noreferrer">Directorio Bajo Grijalva</a>
-          <a href="https://app.conagua.gob.mx/spr/pronosticogasir.html" target="_blank" rel="noopener noreferrer">Precipitación media por cuenca · próximos 3 días</a>
-          <a href="https://app.conagua.gob.mx/spr/index.html" target="_blank" rel="noopener noreferrer">Portal SPR</a>
-        </div>
-        <p class="footnote">Referencia orientativa, no equivalente a una predicción validada por esta aplicación. Esta primera incorporación no extrae cifras de imágenes ni presupone vigencia del producto.</p>
-      </details>
-    </section>
-
     <section class="panel spr-panel" id="sprPanel">
-      <h2>Pronóstico hidrológico CONAGUA · Bajo Grijalva</h2>
-      <p id="sprStatus" class="footnote">Consulta independiente de la red oficial. No se han homologado series numéricas ni fechas de emisión.</p>
-      <p class="spr-actions"><a href="https://app.conagua.gob.mx/spr/bajogrijalva.html" target="_blank" rel="noopener noreferrer">Abrir puntos de pronóstico (SPR) ↗</a>
-      <a href="https://app.conagua.gob.mx/spr/pronosticogasir.html" target="_blank" rel="noopener noreferrer">Precipitación media por cuenca ↗</a></p>
-      <div class="table-wrap"><table class="spr-table"><thead><tr><th>Estación</th><th>Localización en mapa</th><th>Dato hidrológico SPR</th><th>Fuente oficial</th></tr></thead><tbody id="sprDirectory"></tbody></table></div>
-      <p class="footnote">Los marcadores SPR se activan de forma independiente. Sólo se dibujan estaciones con coordenadas de referencia ya existentes; no se inventan ubicaciones, valores o tendencias. La capa no participa en el cálculo del semáforo actual.</p>
+      <h2>Pronóstico hidrológico CONAGUA (SPR)</h2>
+      <p class="spr-intro">Capa independiente de consulta. Verificación de accesibilidad y fecha de revisión del portal, no equivale a la vigencia de su pronóstico. Sin extracción numérica validada, no se generan valores ni se altera el semáforo operativo.</p>
+      <p id="sprHealth" class="footnote" role="status">Estado del portal: pendiente de revisión.</p>
+      <p id="sprStatus" class="footnote">Preparando directorio de pronóstico.</p>
+      <div class="spr-links">
+        <a href="https://app.conagua.gob.mx/spr/bajogrijalva.html" target="_blank" rel="noopener noreferrer">Bajo Grijalva (13 estaciones) ↗</a>
+        <a href="https://app.conagua.gob.mx/spr/gc.html" target="_blank" rel="noopener noreferrer">Golfo Centro · Tonalá / San José del Carmen ↗</a>
+        <a href="https://app.conagua.gob.mx/spr/pronosticogasir.html" target="_blank" rel="noopener noreferrer">Precipitación media por cuenca ↗</a>
+      </div>
+      <p class="footnote">La estación San José del Carmen (JDCVC), río Tonalá, está en el directorio oficial de Golfo Centro. Se mantiene sin marcador hasta verificar coordenadas oficiales.</p>
     </section>
-    <section class="panel" id="sprPanel" hidden>
-      <h2>Pronóstico de ríos · CONAGUA SPR</h2>
-      <p class="footnote">Capa de consulta oficial independiente. No se muestran valores pronosticados hasta comprobar su extracción, fecha de emisión y vigencia. Los puntos sin coordenadas verificadas permanecen en el directorio inferior.</p>
-      <p id="sprStatus" role="status">Cargando catálogo SPR…</p>
-      <div id="sprDirectory" class="spr-directory"></div>
-      <p><a href="https://app.conagua.gob.mx/spr/bajogrijalva.html" target="_blank" rel="noopener noreferrer">Consultar producto oficial Bajo Grijalva (SPR)</a> · <a href="https://app.conagua.gob.mx/spr/pronosticogasir.html" target="_blank" rel="noopener noreferrer">Precipitación media por cuenca</a></p>
-    </section>
-
     <section class="panel">
       <h2>Datos relevantes o de preocupación</h2>
       <div id="alertsTable" class="table-wrap"></div>
@@ -119,14 +99,13 @@
     </section>
   </main>
 
-  <script src="config.js?v=26"></script>
-  <script defer src="spr.js?v=1"></script>
+  <script src="config.js?v=27"></script>
   <script>
   (function(){
     const status=document.getElementById('statusText');
     function loadApp(){
       const s=document.createElement('script');
-      s.src='app.js?v=26';
+      s.src='app.js?v=27';
       s.onerror=()=>{status.textContent='No fue posible cargar la aplicación del mapa.'};
       document.body.appendChild(s);
     }
