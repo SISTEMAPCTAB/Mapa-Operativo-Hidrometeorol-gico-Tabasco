@@ -128,25 +128,31 @@ async function renderForecast(){
     if(seq!==forecastRenderSeq)return;
     if(!feature)continue;
     const color=forecastColor(min,max);
-    const layer=esriFeatureLayer(feature,{color,weight:3,fillColor:color,fillOpacity:.30,opacity:1});
+    const layer=esriFeatureLayer(feature,{color,weight:3,fillColor:color,fillOpacity:.28,opacity:1});
     if(!layer)continue;
+    const ref=L.latLng(cfg.center[0],cfg.center[1]);
+    if(!layer.getBounds().contains(ref)){
+      console.warn("Polígono descartado por no contener su referencia SMN:",name);
+      continue;
+    }
     const attrs=feature?.attributes||{};
     const official=attrs.Nombre_de||attrs.Nombre_d_1||"Cuenca CONAGUA";
     layer.bindPopup(`<div class="popup-title">${esc(name)} · SMN</div><div class="popup-grid">
       <b>Ventana</b><span>${esc(win)} h</span>
       <b>Pronóstico</b><span>${forecastLabel(min,max)}</span>
-      <b>Delimitación</b><span>${esc(official)} · CONAGUA</span>
+      <b>Cuenca hidrológica</b><span>${esc(official)} · CONAGUA</span>
       <b>Emisión</b><span>${esc(latestForecastData?.smn96?.emision||"s/d")}</span>
       <b>Fecha</b><span>${esc(latestForecastData?.smn96?.fecha||"s/d")}</span>
-      <b>Nota</b><span>Polígono oficial de la cuenca hidrológica CONAGUA que contiene el punto de referencia de la cuenca SMN.</span>
+      <b>Nota</b><span>La geometría mostrada es la cuenca hidrológica oficial CONAGUA que contiene la referencia del producto SMN; el nombre operativo SMN puede abarcar una agrupación hidrológica distinta.</span>
     </div>`);
+    layer.bindTooltip(`${esc(name)} · ${forecastLabel(min,max)}`,{
+      sticky:true,
+      direction:"auto",
+      className:"forecast-hover-label",
+      opacity:.96
+    });
     layer.addTo(forecastLayer);
     rendered++;
-    const center=layer.getBounds().getCenter();
-    L.marker(center,{
-      interactive:false,
-      icon:L.divIcon({className:"",html:`<div class="forecast-basin-label">${esc(name)} · ${forecastLabel(min,max)}</div>`})
-    }).addTo(forecastLayer);
   }
   const s=document.getElementById("statusText");
   if(s&&win!=="off"){
