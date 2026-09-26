@@ -126,3 +126,54 @@ main{max-width:1500px;margin:auto;padding:14px}.summary{display:grid;grid-templa
 
 .update-note{background:#fff;border:1px solid var(--line);border-radius:12px;padding:9px 13px;margin:0 0 10px;color:#515151;font-size:.84rem;line-height:1.4}
 @media(max-width:600px){.update-note{font-size:.78rem}.leaflet-popup-content{max-height:55vh;overflow-y:auto}.popup-grid{grid-template-columns:minmax(90px,auto) minmax(0,1fr);overflow-wrap:anywhere}}
+
+/* Popups hidrométricos compactos: Safari/iPhone, sin columnas desbordadas. */
+#map .leaflet-popup-content-wrapper{
+  max-width:min(330px,calc(100vw - 54px));
+  box-sizing:border-box;
+}
+#map .leaflet-popup-content{
+  width: min(285px,calc(100vw - 84px))!important;
+  max-width:100%!important;
+  max-height:min(55vh,410px)!important;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain;
+  margin:12px 14px!important;
+  box-sizing:border-box;
+}
+#map .popup-grid{
+  display:grid!important;
+  grid-template-columns:minmax(0,100px) minmax(0,1fr)!important;
+  grid-auto-rows:min-content!important;
+  align-content:start!important;
+  align-items:start!important;
+  gap:7px 9px!important;
+  height:auto!important;
+  min-height:0!important;
+  width:100%!important;
+  max-width:100%!important;
+}
+#map .popup-grid>b,#map .popup-grid>span{
+  display:block!important;
+  min-width:0!important;
+  max-width:100%!important;
+  align-self:start!important;
+  margin:0!important;
+  padding:0!important;
+  overflow-wrap:anywhere!important;
+  word-break:normal!important;
+  line-height:1.32!important;
+  font-size:.83rem!important;
+}
+#map .popup-title{
+  font-size:1rem!important;
+  line-height:1.25!important;
+  padding-right:20px!important;
+  overflow-wrap:anywhere!important;
+}
+@media(max-width:600px){
+  #map .leaflet-popup-content{width:min(270px,calc(100vw - 94px))!important;max-height:min(49vh,340px)!important}
+  #map .popup-grid{grid-template-columns:minmax(0,94px) minmax(0,1fr)!important;gap:6px 8px!important}
+  #map .popup-grid>b,#map .popup-grid>span{font-size:.79rem!important}
+}
