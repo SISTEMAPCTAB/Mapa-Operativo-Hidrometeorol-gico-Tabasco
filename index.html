@@ -56,6 +56,7 @@
       <label><input type="checkbox" id="showLevels" checked> Niveles</label>
       <label><input type="checkbox" id="showRain" checked> Lluvia</label>
       <label><input type="checkbox" id="showUpstream" checked> Aguas arriba</label>
+      <label><input type="checkbox" id="showSpr"> Pronóstico hidrológico CONAGUA (SPR)</label>
       <label class="forecast-control">Pronóstico SMN
         <select id="forecastWindow" aria-label="Ventana de pronóstico SMN">
           <option value="off">Oculto</option>
@@ -75,6 +76,7 @@
         <div class="map-overlay-row"><span class="legend-circle"></span><span><b>Círculo/gota</b> = lluvia</span></div>
         <div class="map-overlay-row"><span class="legend-triangle"></span><span><b>Triángulo</b> = nivel de río</span></div>
         <div class="map-overlay-row"><span class="legend-upstream">GT/CH</span><span><b>Aguas arriba</b> = Chiapas/Guatemala</span></div>
+        <div class="map-overlay-row"><span class="spr-symbol" aria-hidden="true"></span><span><b>Anillo morado</b> = enlace al SPR CONAGUA (no representa una alerta)</span></div>
       </aside>
     </div>
 
@@ -93,6 +95,14 @@
       </details>
     </section>
 
+    <section class="panel spr-panel" id="sprPanel">
+      <h2>Pronóstico hidrológico CONAGUA · Bajo Grijalva</h2>
+      <p id="sprStatus" class="footnote">Consulta independiente de la red oficial. No se han homologado series numéricas ni fechas de emisión.</p>
+      <p class="spr-actions"><a href="https://app.conagua.gob.mx/spr/bajogrijalva.html" target="_blank" rel="noopener noreferrer">Abrir puntos de pronóstico (SPR) ↗</a>
+      <a href="https://app.conagua.gob.mx/spr/pronosticogasir.html" target="_blank" rel="noopener noreferrer">Precipitación media por cuenca ↗</a></p>
+      <div class="table-wrap"><table class="spr-table"><thead><tr><th>Estación</th><th>Localización en mapa</th><th>Dato hidrológico SPR</th><th>Fuente oficial</th></tr></thead><tbody id="sprDirectory"></tbody></table></div>
+      <p class="footnote">Los marcadores SPR se activan de forma independiente. Sólo se dibujan estaciones con coordenadas de referencia ya existentes; no se inventan ubicaciones, valores o tendencias. La capa no participa en el cálculo del semáforo actual.</p>
+    </section>
     <section class="panel">
       <h2>Datos relevantes o de preocupación</h2>
       <div id="alertsTable" class="table-wrap"></div>
@@ -100,14 +110,14 @@
     </section>
   </main>
 
-  <script src="config.js?v=23"></script>
+  <script src="config.js?v=26"></script>
   <script defer src="spr.js?v=1"></script>
   <script>
   (function(){
     const status=document.getElementById('statusText');
     function loadApp(){
       const s=document.createElement('script');
-      s.src='app.js?v=23';
+      s.src='app.js?v=26';
       s.onerror=()=>{status.textContent='No fue posible cargar la aplicación del mapa.'};
       document.body.appendChild(s);
     }
