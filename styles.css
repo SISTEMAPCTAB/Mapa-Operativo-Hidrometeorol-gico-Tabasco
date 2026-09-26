@@ -88,3 +88,23 @@ main{max-width:1500px;margin:auto;padding:14px}.summary{display:grid;grid-templa
   .map-wrap .forecast-summary-title,.map-wrap .map-overlay-title{font-size:.95rem}
   .map-wrap .map-overlay-row{align-items:center;gap:10px}
 }
+
+/* iPhone SE / pantallas compactas: paneles en flujo, nunca superpuestos al mapa. */
+@media (max-width:600px){
+  html,body,main,.map-wrap{max-width:100%;min-width:0}
+  .map-wrap{display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:10px}
+  .map-wrap #map{order:0;flex:none;max-width:100%}
+  .map-wrap #forecastSummary,
+  .map-wrap .map-overlay-legend{
+    position:relative!important;top:auto!important;right:auto!important;
+    bottom:auto!important;left:auto!important;transform:none!important;
+    display:block;width:100%!important;max-width:100%!important;min-width:0!important;
+    height:auto!important;max-height:none!important;overflow:visible!important;
+    margin:0!important;box-sizing:border-box!important;pointer-events:auto!important;
+  }
+  .map-wrap #forecastSummary{order:1}
+  .map-wrap #forecastSummary:empty{display:none!important}
+  .map-wrap .map-overlay-legend{order:2}
+  .forecast-summary-row{display:flex;flex-wrap:nowrap;min-width:0}
+  .forecast-summary-row > span:last-child{min-width:0;overflow-wrap:anywhere}
+}
