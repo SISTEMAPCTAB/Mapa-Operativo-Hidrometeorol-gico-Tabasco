@@ -343,7 +343,21 @@ async function load(){
    if(type.includes("insivumeh"))return 4;
    return 5; // Referencias externas/sin adscripción validada, sin asociarlas a otra cuenca.
  }
- alerts.sort((a,b)=>systemRank(a)-systemRank(b)||rainFirst(a)-rainFirst(b)||(b.priority||0)-(a.priority||0)||String(a.name).localeCompare(String(b.name),"es"));
+ // En Usumacinta se respeta el tránsito: Guatemala/afluentes aguas arriba,
+ // aportación Lacantún, después estaciones de Tabasco. Sin inferir lecturas.
+ function usumacintaOrder(a){
+   const n=norm(a.name),river=norm(a.river||""),type=norm(a.type||"");
+   if(/boca del cerro/.test(n))return 30;
+   if(/^san pedro$/.test(n))return 31;
+   if(/lacantun/.test(n+" "+river))return 20;
+   if(type.includes("insivumeh")||/el tigre|el porvenir|panzos|playa grande|cahabon|peten|chixoy|machaquila|urrutia|yaxha/.test(n))return rainFirst(a)?11:10;
+   return 21;
+ }
+ alerts.sort((a,b)=>{
+   const sa=systemRank(a),sb=systemRank(b);
+   return sa-sb||(sa===4?usumacintaOrder(a)-usumacintaOrder(b):rainFirst(a)-rainFirst(b))||
+     (b.priority||0)-(a.priority||0)||String(a.name).localeCompare(String(b.name),"es");
+ });
  const seen=new Set(),filtered=alerts.filter(a=>{const k=[a.type,a.name,a.detail].join("|");if(seen.has(k))return false;seen.add(k);return true});
  document.getElementById("alertsTable").innerHTML=filtered.length?
  `<table><thead><tr><th>Tipo</th><th>Estación</th><th>Condición</th><th>Dato relevante</th></tr></thead><tbody>${filtered.map(a=>`<tr><td>${esc(a.type)}</td><td><b>${esc(a.name)}</b>${a.river?`<br><small class="muted">Río: ${esc(a.river)}</small>`:""}</td><td>${esc(a.status)}</td><td>${esc(a.detail)}</td></tr>`).join("")}</tbody></table>`:
