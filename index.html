@@ -14,7 +14,7 @@
   <title>Mapa Operativo Hidrometeorológico · Tabasco</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="styles.css?v=25">
+  <link rel="stylesheet" href="styles.css?v=26">
 </head>
 <body>
   <header class="topbar">
@@ -78,6 +78,21 @@
       </aside>
     </div>
 
+    <section class="panel spr-panel" aria-labelledby="sprTitle">
+      <details id="sprPanel">
+        <summary id="sprTitle">Pronóstico hidrológico CONAGUA · Bajo Grijalva <span class="spr-tag">Consulta oficial</span></summary>
+        <p class="spr-intro">Complemento del Sistema de Pronóstico en Ríos (SPR). Consulte las gráficas en CONAGUA y verifique su fecha de emisión. Los valores pronosticados no se mezclan con niveles observados, Δ24 h, NAMO ni semáforo del mapa.</p>
+        <p id="sprSourceStatus" class="footnote">Preparando directorio de los 13 puntos oficiales…</p>
+        <div id="sprStations" class="spr-stations" aria-label="Puntos de pronóstico Bajo Grijalva"></div>
+        <div class="spr-links">
+          <a href="https://app.conagua.gob.mx/spr/bajogrijalva.html" target="_blank" rel="noopener noreferrer">Directorio Bajo Grijalva</a>
+          <a href="https://app.conagua.gob.mx/spr/pronosticogasir.html" target="_blank" rel="noopener noreferrer">Precipitación media por cuenca · próximos 3 días</a>
+          <a href="https://app.conagua.gob.mx/spr/index.html" target="_blank" rel="noopener noreferrer">Portal SPR</a>
+        </div>
+        <p class="footnote">Referencia orientativa, no equivalente a una predicción validada por esta aplicación. Esta primera incorporación no extrae cifras de imágenes ni presupone vigencia del producto.</p>
+      </details>
+    </section>
+
     <section class="panel">
       <h2>Datos relevantes o de preocupación</h2>
       <div id="alertsTable" class="table-wrap"></div>
@@ -86,6 +101,7 @@
   </main>
 
   <script src="config.js?v=23"></script>
+  <script defer src="spr.js?v=1"></script>
   <script>
   (function(){
     const status=document.getElementById('statusText');
