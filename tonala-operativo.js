@@ -1,128 +1,98 @@
 (()=>{
 "use strict";
-// Módulo independiente RH29: no altera el semáforo Grijalva-Usumacinta ni el Agente fuente.
-const base="/Agente-Hidrometeorologico-Cloud/data/";
-const U={tonala:base+"coatzacoalcos_tonala/latest.json",rain:base+"niveles/Lluvia_CONAGUA/ultimo_corte.json",weather:base+"weatherlink/latest.json"};
-const weatherNames=new Set(["Impulsora","PASO LA MINA","Modesta_1","CitrusMax IP Gateway S2"]);
+// Solo presentación cartográfica: consume datos publicados por el Agente, sin modificarlo.
+const BASE="/Agente-Hidrometeorologico-Cloud/data/";
+const URLS={levels:BASE+"coatzacoalcos_tonala/latest.json",rain:BASE+"niveles/Lluvia_CONAGUA/ultimo_corte.json",weather:BASE+"weatherlink/latest.json"};
+const STATIONS=[
+ {name:"Impulsora",at:[18.0054,-93.58133],place:"Ingenio Presidente Benito Juárez · ubicación de localidad"},
+ {name:"PASO LA MINA",at:[18.0090,-93.58133],place:"Ingenio Presidente Benito Juárez · punto indicativo desplazado para distinguir estaciones"},
+ {name:"Modesta_1",at:[18.06778,-93.56139],place:"Poblado C-21 · ubicación de localidad"}
+];
+// CitrusMax no tiene ubicación instrumental verificada y su última observación está atrasada: no se inventa marcador.
+const LOCATIONS={
+ "san-jose-del-carmen":{at:[17.86948,-94.08515],name:"San José del Carmen",note:"Ubicación indicativa de localidad; coordenada instrumental pendiente"},
+ "agua-dulce":{at:[18.139,-94.145],name:"Agua Dulce",note:"Ubicación indicativa de localidad; coordenada instrumental pendiente"}
+};
+const BRIDGE=[18.096,-94.113]; // Referencia general del corredor Puente Tonalá; coordenada instrumental pendiente.
 const $=id=>document.getElementById(id);
-const finite=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
-const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const finite=x=>x!==null&&x!==undefined&&x!==""&&Number.isFinite(Number(x));
 const fmt=(v,d=2)=>finite(v)?Number(v).toFixed(d):"s/d";
-const nowLocal=()=>new Intl.DateTimeFormat("en-CA",{timeZone:"America/Mexico_City",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
-const human=v=>{const t=Date.parse(v||"");return Number.isFinite(t)?new Date(t).toLocaleString("es-MX",{timeZone:"America/Mexico_City",day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}):"s/d"};
+const esc=x=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const date=x=>{let t=Date.parse(x||"");return Number.isFinite(t)?new Date(t).toLocaleString("es-MX",{timeZone:"America/Mexico_City",day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",hour12:false}):"s/d"};
+const localDay=()=>new Intl.DateTimeFormat("en-CA",{timeZone:"America/Mexico_City",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+const fresh=x=>{const t=Date.parse(x||"");return Number.isFinite(t)&&t<=Date.now()+300000&&Date.now()-t<=3*3600000};
+const colors={1:"#f2d600",2:"#f28c00",3:"#d62828",4:"#6a2ca0"};
+function rainClass(v){
+ if(!finite(v))return null;
+ const x=Number(v);
+ return x>=250?{n:4,label:"Extraordinaria"}:x>=150?{n:3,label:"Torrencial"}:x>=75?{n:2,label:"Intensa"}:x>=50?{n:1,label:"Muy fuerte"}:null;
+}
+const levelIcon=n=>L.divIcon({className:"",html:'<div class="level-triangle s-'+["gray","green","yellow","orange","red"][n+1]+'"></div>',iconSize:[24,22],iconAnchor:[12,11]});
+const dropIcon=n=>L.divIcon({className:"",html:'<div class="rain-dot" style="background:'+colors[n]+'"></div>',iconSize:[20,20],iconAnchor:[10,15]});
+const referenceIcon=()=>L.divIcon({className:"",html:'<div style="background:#fff;border:2px solid #79858a;border-radius:50%;width:22px;height:22px;font-size:8px;line-height:18px;text-align:center;font-weight:800;color:#53616b">WL</div>',iconSize:[22,22],iconAnchor:[11,11]});
 async function get(u){try{const r=await fetch(u+"?v="+Date.now(),{cache:"no-store"});return r.ok?await r.json():null}catch{return null}}
-function rainClass(mm){
- if(!finite(mm))return null;
- const n=Number(mm);
- if(n>=250)return{level:4,label:"Extraordinaria"};
- if(n>=150)return{level:3,label:"Torrencial"};
- if(n>=75)return{level:2,label:"Intensa"};
- if(n>=50)return{level:1,label:"Muy fuerte"};
- return null;
+let snapshot=null,levelLayer=null,rainLayer=null,run=0;
+function ensureLayers(){
+ const map=window.TONALA_MAP;
+ if(!map||!window.L)return false;
+ if(!levelLayer)levelLayer=L.layerGroup();
+ if(!rainLayer)rainLayer=L.layerGroup();
+ return true;
 }
-const fresh=v=>{let t=Date.parse(v||"");return Number.isFinite(t)&&t<=Date.now()+300000&&Date.now()-t<=3*3600000};
-const tr=(a)=>"<tr>"+a.map(x=>"<td>"+x+"</td>").join("")+"</tr>";
-let serial=0;
-let levelMarker=null,rainMarker=null;
-let levelSnapshot=null,rainSnapshot=null;
-const location=[17.86948,-94.08515]; // Punto indicativo, no coordenada certificada de estación.
-function symbolLevel(level,valid){
- const klass=!valid?"gray":["green","yellow","orange","red"][Math.min(3,Math.max(0,level))];
- return L.divIcon({className:"",html:'<div class="level-triangle s-'+klass+'"></div>',iconSize:[24,22],iconAnchor:[12,11]});
-}
-function symbolRain(level){
- const colors={1:"#f2d600",2:"#f28c00",3:"#d62828",4:"#6a2ca0"};
- return L.divIcon({className:"",html:'<div class="rain-dot" style="background:'+colors[level]+'"></div>',iconSize:[20,20],iconAnchor:[10,15]});
-}
-function drawMarkers(){
- const map=window.TONALA_MAP;if(!map||!window.L)return;
- if(levelMarker){map.removeLayer(levelMarker);levelMarker=null}
- if(rainMarker){map.removeLayer(rainMarker);rainMarker=null}
- if(levelSnapshot&&$("showLevels")?.checked){
-  const {level,current,p}=levelSnapshot;
-  levelMarker=L.marker(location,{icon:symbolLevel(level,current),title:"San José del Carmen · Río Tonalá"})
-   .bindPopup('<div class="popup-title">San José del Carmen · Río Tonalá</div><div class="popup-grid"><b>Nivel</b><span>'+fmt(p.current_m)+' m</span><b>NAMO</b><span>'+fmt(p.namo_m)+' m</span><b>Δ informe</b><span>'+fmt(p.delta_m)+' m</span><b>Emisión</b><span>'+esc(p.date||"s/d")+'</span><b>Estado</b><span>'+esc(current?"Lectura de la emisión del día":"Dato anterior; no activa alerta actual")+'</span></div><p>Posición geográfica indicativa de la localidad, no del instrumento.</p>')
-   .addTo(map);
+function draw(){
+ if(!ensureLayers()||!snapshot)return;
+ const map=window.TONALA_MAP;
+ levelLayer.clearLayers();rainLayer.clearLayers();
+ for(const row of snapshot.levels){
+  const info=LOCATIONS[row.id];if(!info||!finite(row.current_m))continue;
+  const validity=snapshot.current,actual=Number(row.current_m),namo=Number(row.namo_m),delta=Number(row.delta_m);
+  let severity=0,reason="Seguimiento ordinario";
+  if(validity&&finite(row.namo_m)){
+   if(actual>=namo){severity=3;reason="Igual o superior al NAMO"}
+   else if(namo-actual<=.30){severity=2;reason="A 30 cm o menos del NAMO"}
+   else if(namo-actual<=.50){severity=1;reason="A 50 cm o menos del NAMO"}
+   if(finite(row.delta_m)&&delta>=.30){severity=Math.max(2,severity);reason+="; ascenso ≥30 cm entre escalas"}
+   else if(finite(row.delta_m)&&delta>=.15){severity=Math.max(1,severity);reason+="; ascenso ≥15 cm entre escalas"}
+  }
+  const icon=levelIcon(validity?severity:-1);
+  L.marker(info.at,{icon,title:row.name+" · nivel"})
+   .bindPopup('<div class="popup-title">'+esc(row.name)+' · '+esc(row.river)+'</div><div class="popup-grid"><b>Nivel</b><span>'+fmt(row.current_m)+' m</span><b>Escala anterior</b><span>'+fmt(row.previous_m)+' m</span><b>Δ informe</b><span>'+((delta>0)?"+":"")+fmt(row.delta_m)+' m</span><b>NAMO</b><span>'+fmt(row.namo_m)+' m</span><b>Distancia NAMO</b><span>'+fmt(row.below_namo_m)+' m abajo</span><b>Emisión oficial</b><span>'+esc(snapshot.date||"s/d")+'</span><b>Estado</b><span>'+esc(validity?reason:"Dato anterior; no genera alerta actual")+'</span></div><p>'+esc(info.note)+'</p>')
+   .addTo(levelLayer);
  }
- if(rainSnapshot&&$("showRain")?.checked){
-  const {item,k}=rainSnapshot;
-  // Ubicación indicativa cercana al corredor Tonalá, separada visualmente del nivel.
-  rainMarker=L.marker([location[0]+.017,location[1]+.014],{icon:symbolRain(k.level),title:"Puente Tonalá · lluvia"})
-   .bindPopup('<div class="popup-title">Puente Tonalá · lluvia CONAGUA</div><div class="popup-grid"><b>Precipitación 24 h</b><span>'+fmt(item.lluvia_24h_precedentes_mm,1)+' mm</span><b>Categoría</b><span>'+esc(k.label)+'</span><b>Lectura</b><span>'+human(item.fecha_hora)+'</span></div><p>Ubicación indicativa; pendiente de coordenada oficial del pluviómetro.</p>')
-   .addTo(map);
+ const bridge=snapshot.bridge;
+ if(bridge){
+  const valid=fresh(bridge.fecha_hora)&&bridge.estado_24h==="observado";
+  const classification=valid?rainClass(bridge.lluvia_24h_precedentes_mm):null;
+  if(classification)L.marker(BRIDGE,{icon:dropIcon(classification.n),title:"Puente Tonalá · lluvia"})
+   .bindPopup('<div class="popup-title">Puente Tonalá · CONAGUA</div><div class="popup-grid"><b>Lluvia 24 h</b><span>'+fmt(bridge.lluvia_24h_precedentes_mm,1)+' mm</span><b>Fecha y hora</b><span>'+date(bridge.fecha_hora)+'</span><b>Categoría</b><span>'+esc(classification.label)+'</span></div><p>Ubicación indicativa del corredor; no coordenada instrumental.</p>')
+   .addTo(rainLayer);
  }
+ for(const info of STATIONS){
+  const w=snapshot.weather.find(x=>x.nombre===info.name);if(!w)continue;
+  const valid=fresh(w.observed_utc),a=w.accumulations_mm||{},classification=valid?rainClass(a["24"]):null;
+  // Gota de lluvia sólo desde 50 mm; punto WL neutro para consultar estaciones bajo umbral.
+  const icon=classification?dropIcon(classification.n):referenceIcon();
+  const hint=classification?classification.label:valid?"Estación de consulta · lluvia inferior a 50 mm":"Dato anterior";
+  L.marker(info.at,{icon,title:info.name+" · WeatherLink"})
+   .bindPopup('<div class="popup-title">'+esc(info.name)+' · WeatherLink</div><div class="popup-grid"><b>Localidad</b><span>'+esc(w.ubicacion||"s/d")+'</span><b>1 h</b><span>'+ (valid?fmt(a["1"],1)+" mm":"s/d")+'</span><b>6 h</b><span>'+(valid?fmt(a["6"],1)+" mm":"s/d")+'</span><b>24 h</b><span>'+(valid?(w.accumulation_status?.["24"]==="minimo_observado"?"≥ ":"")+fmt(a["24"],1)+" mm":"s/d")+'</span><b>Observación</b><span>'+date(w.observed_utc)+'</span><b>Estado</b><span>'+esc(hint)+'</span></div><p>'+esc(info.place)+'. Referencia regional, adscripción a la cuenca Tonalá no confirmada. No modifica el semáforo del río.</p>')
+   .addTo(rainLayer);
+ }
+ if($("showLevels")?.checked){if(!map.hasLayer(levelLayer))levelLayer.addTo(map)}else if(map.hasLayer(levelLayer))map.removeLayer(levelLayer);
+ if($("showRain")?.checked){if(!map.hasLayer(rainLayer))rainLayer.addTo(map)}else if(map.hasLayer(rainLayer))map.removeLayer(rainLayer);
 }
 async function update(){
- const id=++serial;
- const box=$("tonalaOperational");if(!box)return;
- const [doc,rain,weather]=await Promise.all([get(U.tonala),get(U.rain),get(U.weather)]);
- if(id!==serial)return;
- const mat=doc?.reports?.matutino||{},points=Array.isArray(mat.stations)?mat.stations:[];
- const today=nowLocal(),validDate=/^\d{4}-\d{2}-\d{2}$/.test(mat.date||"");
- // La fecha es la de emisión del documento, NO la hora de observación.
- const current=validDate&&mat.date===today;
- const levels=points.map(p=>{
-  let level=0,reason=[];
-  const delta=finite(p.delta_m)?Number(p.delta_m):null;
-  const actual=finite(p.current_m)?Number(p.current_m):null;
-  const namo=finite(p.namo_m)?Number(p.namo_m):null;
-  if(current&&actual!==null&&namo!==null&&namo>0){
-   const remaining=namo-actual;
-   if(remaining<=0){level=3;reason.push("nivel igual o superior al NAMO")}
-   else if(remaining<=.30){level=2;reason.push("a 30 cm o menos del NAMO")}
-   else if(remaining<=.50){level=1;reason.push("a 50 cm o menos del NAMO")}
-   if(delta!==null&&delta>=.30){level=Math.max(level,2);reason.push("ascenso entre escalas ≥30 cm")}
-   else if(delta!==null&&delta>=.15){level=Math.max(level,1);reason.push("ascenso entre escalas ≥15 cm")}
-  }
-  return{...p,level,reason};
- });
- // Puente Tonalá: fuente directamente asociada, nunca confundir precipitación con escala hidrométrica.
- const bridge=(Array.isArray(rain)?rain:[]).filter(x=>/puente tonal[aá]/i.test(x.estacion||"")).sort((a,b)=>Date.parse(b.fecha_hora||"")-Date.parse(a.fecha_hora||""))[0];
- const bridgeFresh=bridge&&fresh(bridge.fecha_hora)&&bridge.estado_24h==="observado";
- const wr=(weather?.stations||[]).filter(x=>weatherNames.has(x.nombre));
- const liveWeather=wr.filter(x=>fresh(x.observed_utc));
- // WeatherLink regional no se toma como media de cuenca ni se atribuye a Tonalá sin coordenadas oficiales.
- const signals=[];
- if(bridgeFresh){let c=rainClass(bridge.lluvia_24h_precedentes_mm);if(c)signals.push({source:"Puente Tonalá",mm:bridge.lluvia_24h_precedentes_mm,time:bridge.fecha_hora,...c,associated:true})}
- for(const w of liveWeather){const c=rainClass(w.accumulations_mm?.["24"]);if(c)signals.push({source:w.nombre,mm:w.accumulations_mm["24"],time:w.observed_utc,...c,associated:false})}
- const strong=signals.filter(x=>x.associated),maxL=Math.max(0,...levels.map(x=>x.level));
- const label=["Sin señal hidrométrica vigente","Atención preventiva","Vigilancia reforzada","NAMO alcanzado o superado"][maxL];
- let badge=current?label:"Nivel no vigente · sin alerta hidrométrica actual";
- if(strong.length)badge+=" · lluvia observada en Puente Tonalá";
- const levRows=levels.map(p=>{
-  let klass=!current?"Dato anterior":p.level>=2?"Vigilancia reforzada":p.level?"Atención preventiva":"Observación";
-  return tr(["<b>"+esc(p.name)+"</b><br><small>"+esc(p.river)+"</small>",fmt(p.current_m)+" m",(finite(p.delta_m)&&Number(p.delta_m)>0?"+":"")+fmt(p.delta_m)+" m",fmt(p.namo_m)+" m",esc(mat.date||"s/d"),esc(klass)+(p.reason.length?" · "+esc(p.reason.join("; ")):"")]);
- }).join("");
- const rainRows=[];
- if(bridge)rainRows.push(tr(["Puente Tonalá","CONAGUA",bridgeFresh?fmt(bridge.lluvia_24h_precedentes_mm)+" mm":"s/d",human(bridge.fecha_hora),bridgeFresh?"Vigente":"Dato anterior"]));
- for(const w of wr){let yes=fresh(w.observed_utc),v=w.accumulations_mm?.["24"];
-  let state=yes?"Vigente · referencia regional":"Dato anterior";
-  if(w.nombre==="CitrusMax IP Gateway S2")state+=" · cuenca sin confirmar";
-  rainRows.push(tr([esc(w.nombre),"WeatherLink",yes&&finite(v)?(w.accumulation_status?.["24"]==="minimo_observado"?"≥ ":"")+fmt(v,1)+" mm":"s/d",human(w.observed_utc),esc(state)]));
- }
- const notes=signals.map(s=>'<p><b>'+esc(s.source)+'</b>: '+fmt(s.mm,1)+' mm/24 h · '+esc(s.label)+' · '+human(s.time)+(s.associated?' · lluvia en Puente Tonalá':' · referencia regional; no se atribuye directamente a la cuenca')+'</p>').join("");
- const tonal=levels.find(p=>p.id==="san-jose-del-carmen");
- levelSnapshot=tonal?{level:tonal.level,current,p:{...tonal,date:mat.date}}:null;
- const rainCategory=bridgeFresh?rainClass(bridge.lluvia_24h_precedentes_mm):null;
- rainSnapshot=rainCategory?{item:bridge,k:rainCategory}:null;
- drawMarkers();
- const banner=$("tonalaMapNotice");
- if(banner)banner.textContent="Coatzacoalcos–Tonalá · "+(current?badge:"última escala "+fmt(tonal?.current_m)+" m ("+esc(mat.date||"s/d")+"); dato anterior, sin alerta hidrométrica actual.");
- const notice=current?'<span class="badge '+(maxL>=2?"danger":maxL?"warn":"ok")+'">'+esc(badge)+'</span>':'<span class="badge warn">'+esc(badge)+'</span>';
- box.innerHTML='<h2>Coatzacoalcos–Tonalá · vigilancia independiente</h2><p>'+notice+'</p>'+
- '<p class="footnote">Fuente hidrométrica: CONAGUA Golfo Centro · última emisión comprobada '+esc(mat.date||"s/d")+'. La fecha de emisión NO equivale a hora observada. Se conserva la última lectura sin elevar alertas por datos anteriores.</p>'+
- '<div class="table-wrap"><table><thead><tr><th>Estación</th><th>Escala</th><th>Δ informe</th><th>NAMO</th><th>Emisión</th><th>Condición</th></tr></thead><tbody>'+(levRows||'<tr><td colspan="6">Sin nivel verificable</td></tr>')+'</tbody></table></div>'+
- '<p class="footnote"><a href="'+esc(mat.url||"https://www.gob.mx/conagua/acciones-y-programas/hidrometeorologia")+'" target="_blank" rel="noopener noreferrer">Consultar informe oficial ↗</a>. Los umbrales indicados son preventivos para visualización; no sustituyen avisos oficiales de CONAGUA.</p>'+
- '<h3>Lluvia y estaciones regionales</h3><div class="table-wrap"><table><thead><tr><th>Estación</th><th>Fuente</th><th>24 h</th><th>Observación</th><th>Estado</th></tr></thead><tbody>'+(rainRows.join("")||'<tr><td colspan="5">Sin registros</td></tr>')+'</tbody></table></div>'+
- (notes?'<div class="note"><b>Señales de lluvia ≥50 mm:</b>'+notes+'</div>':'<p class="footnote">Sin lluvia vigente ≥50 mm en las estaciones consultadas.</p>')+
- '<p class="footnote">Esta capa informativa es independiente del semáforo Grijalva–Usumacinta. Se evita trasladar umbrales o valores entre cuencas. Las estaciones WeatherLink conservan su adscripción original hasta comprobar coordenadas y subcuenca.</p>';
+ const id=++run;const [data,rain,weather]=await Promise.all([get(URLS.levels),get(URLS.rain),get(URLS.weather)]);if(id!==run)return;
+ const mat=data?.reports?.matutino||{},bridge=(Array.isArray(rain)?rain:[]).filter(x=>/puente tonal[aá]/i.test(x.estacion||"")).sort((a,b)=>Date.parse(b.fecha_hora||"")-Date.parse(a.fecha_hora||""))[0]||null;
+ snapshot={levels:mat.stations||[],date:mat.date,current:mat.date===localDay(),bridge,weather:weather?.stations||[]};
+ draw();
+ // El estado global y los demás módulos permanecen independientes.
 }
 document.addEventListener("DOMContentLoaded",()=>{
- $("showLevels")?.addEventListener("change",drawMarkers);
- $("showRain")?.addEventListener("change",drawMarkers);
- update();
- document.getElementById("refreshBtn")?.addEventListener("click",update);
- setInterval(update,15*60*1000);
+ $("showLevels")?.addEventListener("change",draw);
+ $("showRain")?.addEventListener("change",draw);
+ $("refreshBtn")?.addEventListener("click",update);
+ window.addEventListener("tonala-map-ready",draw);
+ update();setInterval(update,15*60*1000);
  document.addEventListener("visibilitychange",()=>{if(!document.hidden)update()});
 });
 })();
