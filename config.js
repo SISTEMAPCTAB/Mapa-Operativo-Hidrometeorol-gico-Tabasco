@@ -5,16 +5,18 @@ window.MAP_CONFIG={
     rainConagua:"/Agente-Hidrometeorologico-Cloud/data/niveles/Lluvia_CONAGUA/ultimo_corte.json",
     weather:"/Agente-Hidrometeorologico-Cloud/data/weatherlink/latest.json",
     weatherExtra:"/Agente-Hidrometeorologico-Cloud/data/weatherlink/extra_latest.json",
-    fuente1:"/Agente-Hidrometeorologico-Cloud/data/latest/FUENTE1.txt"
+    fuente1:"/Agente-Hidrometeorologico-Cloud/data/latest/FUENTE1.txt",
+    insivumehRain:"/Agente-Hidrometeorologico-Cloud/data/fuentes_publicas/insivumeh_automaticas.json",
+    insivumehLevels:"/Agente-Hidrometeorologico-Cloud/data/fuentes_publicas/insivumeh_alto_hidro.json"
   },
   rainThresholds:[
-    {min:250,level:3,label:"Extraordinaria"},
-    {min:150,level:3,label:"Torrencial"},
-    {min:75,level:2,label:"Intensa"},
-    {min:50,level:1,label:"Muy fuerte"},
-    {min:25,level:1,label:"Fuerte"},
-    {min:0,level:0,label:"Ligera/moderada"}
+    {min:250,level:4,label:"Extraordinaria",color:"#6a2ca0"},
+    {min:150,level:3,label:"Torrencial",color:"#d62828"},
+    {min:75,level:2,label:"Intensa",color:"#f28c00"},
+    {min:50,level:1,label:"Muy fuerte",color:"#f2d600"},
+    {min:0,level:0,label:"Menor a muy fuerte",color:"#9aa0a6"}
   ],
+  rainDisplayMinMm:50,
   // Ubicaciones de referencia para el piloto. Se reemplazarán por coordenadas oficiales.
   stations:{
     "Samaria":[18.05,-93.19],"González":[18.03,-92.99],"Oxolotán":[17.38,-92.75],
