@@ -111,45 +111,65 @@ async function renderForecast(){
   forecastLayer.clearLayers();
   let rendered=0;
   const win=document.getElementById("forecastWindow")?.value||"off";
-  if(win==="off"||!latestForecastData)return;
+  if(win==="off"||!latestForecastData){
+    const box=document.getElementById("forecastSummary");
+    if(box)box.innerHTML="";
+    return;
+  }
   const src=latestForecastData?.smn96?.ventanas?.[win]||{};
+  const summary=[];
   for(const [name,val] of Object.entries(src)){
     if(seq!==forecastRenderSeq)return;
     const cfg=C.forecastBasins?.[name];
     if(!cfg)continue;
     const min=Number(val?.min_mm),max=Number(val?.max_mm);
     if(!Number.isFinite(max)||max<50)continue;
-    const feature=await basinPolygonAt(name,cfg);
-    if(seq!==forecastRenderSeq)return;
-    if(!feature)continue;
+
     const color=forecastColor(min,max);
-    const layer=esriFeatureLayer(feature,{color,weight:2.5,fillColor:color,fillOpacity:.22,opacity:.95});
-    if(!layer)continue;
-    const attrs=feature?.attributes||{};
-    const official=attrs.NOMBRE||attrs.NOMBRE_CUE||attrs.Nombre_de||attrs.CUENCA||"Cuenca CONAGUA";
-    layer.bindPopup(`<div class="popup-title">${esc(name)} · SMN</div><div class="popup-grid">
+    const marker=L.marker(cfg.center,{
+      pane:"markerPane",
+      title:name,
+      icon:L.divIcon({
+        className:"",
+        html:`<div class="forecast-diamond" style="background:${color}"></div>`,
+        iconSize:[20,20],
+        iconAnchor:[10,10]
+      })
+    });
+
+    marker.bindPopup(`<div class="popup-title">${esc(name)} · SMN</div><div class="popup-grid">
       <b>Ventana</b><span>${esc(win)} h</span>
       <b>Pronóstico</b><span>${forecastLabel(min,max)}</span>
-      <b>Cuenca de referencia</b><span>${esc(official)} · CONAGUA</span>
       <b>Emisión</b><span>${esc(latestForecastData?.smn96?.emision||"s/d")}</span>
       <b>Fecha</b><span>${esc(latestForecastData?.smn96?.fecha||"s/d")}</span>
-      <b>Nota</b><span>La geometría mostrada es una cuenca oficial CONAGUA usada como referencia espacial para el producto SMN; el nombre operativo del pronóstico puede abarcar una agrupación distinta.</span>
+      <b>Ubicación</b><span>Punto operativo de referencia de la cuenca SMN.</span>
+      <b>Nota</b><span>No se dibuja un polígono hasta contar con una delimitación oficial equivalente a la zonificación específica usada por este producto SMN.</span>
     </div>`);
-    layer.bindTooltip(`${esc(name)} · ${forecastLabel(min,max)}`,{
-      sticky:true,
+    marker.bindTooltip(`${esc(name)} · ${forecastLabel(min,max)}`,{
       direction:"top",
       className:"forecast-tooltip",
       opacity:.96
     });
-    layer.addTo(forecastLayer);
+    marker.addTo(forecastLayer);
+    summary.push({name,min,max,color});
     rendered++;
   }
+
+  const box=document.getElementById("forecastSummary");
+  if(box){
+    box.innerHTML=summary.length
+      ? `<div class="forecast-summary-title">Pronóstico SMN · ${esc(win)} h</div>`+
+        summary.map(x=>`<div class="forecast-summary-row"><span class="forecast-swatch" style="background:${x.color}"></span><span><b>${esc(x.name)}</b> · ${forecastLabel(x.min,x.max)}</span></div>`).join("")
+      : `<div class="forecast-summary-title">Pronóstico SMN · ${esc(win)} h</div><div class="forecast-summary-empty">Sin rangos ≥50 mm en esta ventana.</div>`;
+  }
+
   const s=document.getElementById("statusText");
   if(s&&win!=="off"){
     const base=s.textContent.replace(/ · Pronóstico:.*$/,"");
-    s.textContent=base+" · Pronóstico: "+rendered+" cuenca(s) visible(s)";
+    s.textContent=base+" · Pronóstico: "+rendered+" zona(s) operativa(s)";
   }
 }
+
 function parseOfficial(txt){
  const out=new Map(),lines=String(txt||"").split(/\n/);
  const rx=/^(Samaria|Gonzalez|Oxolotan|Tapijulapa|Teapa|Puyacatengo|San Joaquin|Pueblo Nuevo|Gaviotas|El Muelle|Porvenir|Macuspana|Salto de Agua|San Pedro|Boca del Cerro)\s+.+?\s+(-?\d+(?:\.\d+)?)\s+(?:\d+(?:\.\d+)?\s+)?(?:\d+(?:\.\d+)?\s+)?(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)$/i;
