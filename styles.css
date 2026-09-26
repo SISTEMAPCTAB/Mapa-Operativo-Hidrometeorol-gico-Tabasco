@@ -193,3 +193,16 @@ main{max-width:1500px;margin:auto;padding:14px}.summary{display:grid;grid-templa
 .spr-station a:focus-visible,.spr-links a:focus-visible{outline:3px solid #e2aa3d;outline-offset:2px}
 .spr-links{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
 @media(max-width:600px){.spr-panel summary{font-size:.98rem}.spr-station{align-items:flex-start}.spr-station a{font-size:.75rem;max-width:42%;text-align:center;white-space:normal}.spr-tag{margin-left:0}.spr-intro{font-size:.85rem}}
+
+/* Módulo independiente del Sistema de Pronóstico en Ríos (SPR). */
+.spr-panel h2{font-size:1.32rem}
+.spr-actions{display:flex;flex-wrap:wrap;gap:9px;margin:12px 0}
+.spr-actions a{display:inline-block;border:1px solid #bfb6ce;border-radius:10px;background:#f5f0fc;color:#532c81;padding:9px 12px;font-weight:700;text-decoration:none}
+.spr-actions a:hover{text-decoration:underline}
+.spr-table{min-width:690px}
+.spr-table td{vertical-align:top;font-size:.88rem}
+.spr-table a{color:#532c81;font-weight:750}
+.spr-symbol{display:inline-block;width:15px;height:15px;border:3px solid #532c81;border-radius:50%;background:#fff;flex:0 0 auto}
+.spr-popup{line-height:1.4}
+.spr-popup a{color:#532c81;font-weight:750}
+@media(max-width:600px){.spr-panel h2{font-size:1.1rem}.spr-actions a{font-size:.84rem}.spr-table{min-width:650px}}
