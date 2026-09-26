@@ -9,7 +9,8 @@ window.MAP_CONFIG={
     insivumehRain:"/Agente-Hidrometeorologico-Cloud/data/fuentes_publicas/insivumeh_automaticas.json",
     insivumehLevels:"/Agente-Hidrometeorologico-Cloud/data/fuentes_publicas/insivumeh_alto_hidro.json",
     publicSources:"/Agente-Hidrometeorologico-Cloud/data/fuentes_publicas/latest.json",
-    forecastMapping:"data/pronostico-smn-subcuencas.json"
+    forecastMapping:"data/pronostico-smn-subcuencas.json",
+    forecastGeojson:"data/subcuencas-smn.geojson"
   },
   rainThresholds:[
     {min:250,level:4,label:"Extraordinaria",color:"#6a2ca0"},
