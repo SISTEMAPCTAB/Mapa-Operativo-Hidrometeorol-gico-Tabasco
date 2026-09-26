@@ -13,82 +13,91 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: subcuencas-smn
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
 
       - name: Descargar subcuencas RH30 desde CONAGUA
         run: |
           python - <<'PY'
-          import json, os, time, requests
+          import json, os, requests, datetime
 
           service = "https://sigagis.conagua.gob.mx/ArcGIS/rest/services/LocREPDA/MapServer/18/query"
           mapping = json.load(open("data/pronostico-smn-subcuencas.json", encoding="utf-8"))
 
-          wanted = {}
+          codes = []
+          zone_by_code = {}
           for zone, cfg in mapping["zonas"].items():
               for sb in cfg.get("subcuencas", []):
-                  wanted.setdefault(sb["codigo"], {"nombre": sb.get("nombre", sb["codigo"]), "zonas": []})
-                  wanted[sb["codigo"]]["zonas"].append(zone)
+                  code = sb["codigo"]
+                  if code not in codes:
+                      codes.append(code)
+                  zone_by_code.setdefault(code, []).append(zone)
 
-          features = []
+          where = "SUBCUE IN (" + ",".join("'" + c.replace("'","''") + "'" for c in codes) + ")"
+          payload = {
+              "where": where,
+              "outFields": "FID,CLAVE,RH,CVE_CUEN,CUENCA,SUBCUE,SUBCUENCA,KM2",
+              "returnGeometry": "true",
+              "outSR": "4326",
+              "f": "json"
+          }
+
           session = requests.Session()
           session.headers.update({"User-Agent":"Mozilla/5.0 MapaOperativoIPCET/1.0"})
+          r = session.post(service, data=payload, timeout=25)
+          print("HTTP", r.status_code)
+          r.raise_for_status()
+          data = r.json()
 
-          for code, meta in wanted.items():
-              params = {
-                  "where": f"SUBCUE='{code}'",
-                  "outFields": "FID,CLAVE,RH,CVE_CUEN,CUENCA,SUBCUE,SUBCUENCA,KM2",
-                  "returnGeometry": "true",
-                  "outSR": "4326",
-                  "f": "geojson"
-              }
-              r = session.get(service, params=params, timeout=60)
-              if r.ok:
-                  try:
-                      data = r.json()
-                  except Exception:
-                      data = {}
-              else:
-                  data = {}
+          if data.get("error"):
+              raise SystemExit("ArcGIS error: " + json.dumps(data["error"], ensure_ascii=False))
 
-              fs = data.get("features") or []
-              if not fs:
-                  # Fallback Esri JSON
-                  params["f"] = "json"
-                  r = session.get(service, params=params, timeout=60)
-                  data = r.json() if r.ok else {}
-                  for ft in data.get("features") or []:
-                      rings = (ft.get("geometry") or {}).get("rings") or []
-                      if not rings:
-                          continue
-                      props = ft.get("attributes") or {}
-                      features.append({
-                          "type":"Feature",
-                          "properties": {**props, "zonas_smn": meta["zonas"]},
-                          "geometry":{"type":"Polygon","coordinates":rings}
-                      })
-              else:
-                  for ft in fs:
-                      ft.setdefault("properties", {})["zonas_smn"] = meta["zonas"]
-                      features.append(ft)
-              time.sleep(0.25)
+          features = []
+          found = set()
+          for ft in data.get("features") or []:
+              attrs = ft.get("attributes") or {}
+              code = attrs.get("SUBCUE")
+              rings = (ft.get("geometry") or {}).get("rings") or []
+              if not code or not rings:
+                  continue
+              found.add(code)
+              features.append({
+                  "type":"Feature",
+                  "properties": {
+                      **attrs,
+                      "zonas_smn": zone_by_code.get(code, [])
+                  },
+                  "geometry":{
+                      "type":"Polygon",
+                      "coordinates":rings
+                  }
+              })
+
+          print("Solicitadas:", len(codes), "Encontradas:", len(found))
+          print("Faltantes:", sorted(set(codes)-found))
+
+          if not features:
+              raise SystemExit("CONAGUA no devolvió geometrías.")
 
           out = {
               "type":"FeatureCollection",
               "source":"CONAGUA SIGA / INEGI Cuencas 250 000",
-              "generated_utc":__import__("datetime").datetime.utcnow().isoformat()+"Z",
+              "generated_utc":datetime.datetime.now(datetime.timezone.utc).isoformat(),
+              "requested_codes":codes,
+              "found_codes":sorted(found),
               "features":features
           }
           os.makedirs("data", exist_ok=True)
-          with open("data/subcuencas-smn.geojson","w",encoding="utf-8") as f:
-              json.dump(out,f,ensure_ascii=False,separators=(",",":"))
-
-          print("Features descargadas:", len(features))
-          if not features:
-              raise SystemExit("No se pudo descargar ninguna subcuenca; no se reemplaza el archivo local.")
+          with open("data/subcuencas-smn.geojson","w",encoding="utf-8") as fp:
+              json.dump(out,fp,ensure_ascii=False,separators=(",",":"))
           PY
 
       - name: Guardar GeoJSON actualizado
