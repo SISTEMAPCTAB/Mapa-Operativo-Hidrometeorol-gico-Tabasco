@@ -29,7 +29,8 @@ jobs:
           p=IDs();p.feed(open("index.html",encoding="utf-8").read())
           repeated=[k for k,v in Counter(p.ids).items() if v>1]
           assert not repeated, "IDs duplicados: "+str(repeated)
-          for key in ("forecastWindow","map","showLevels","showRain","showUpstream","tonalaMapNotice","tonalaOperational"):
+          for key in ("forecastWindow","map","showLevels","showRain","showUpstream"):
               assert key in p.ids, "Falta control: "+key
-          print("OK: JS válido y controles únicos")
+          assert "tonalaOperational" not in p.ids, "La tabla duplicada de Tonalá no debe regresar"
+          print("OK: JS válido, controles únicos y sin tablas duplicadas")
           PY
