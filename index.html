@@ -56,6 +56,7 @@
       <label><input type="checkbox" id="showLevels" checked> Niveles</label>
       <label><input type="checkbox" id="showRain" checked> Lluvia</label>
       <label><input type="checkbox" id="showUpstream" checked> Aguas arriba</label>
+      <label><input type="checkbox" id="showSPR"> Pronóstico de ríos CONAGUA (SPR)</label>
       <label><input type="checkbox" id="showSpr"> Pronóstico hidrológico CONAGUA (SPR)</label>
       <label class="forecast-control">Pronóstico SMN
         <select id="forecastWindow" aria-label="Ventana de pronóstico SMN">
@@ -103,6 +104,14 @@
       <div class="table-wrap"><table class="spr-table"><thead><tr><th>Estación</th><th>Localización en mapa</th><th>Dato hidrológico SPR</th><th>Fuente oficial</th></tr></thead><tbody id="sprDirectory"></tbody></table></div>
       <p class="footnote">Los marcadores SPR se activan de forma independiente. Sólo se dibujan estaciones con coordenadas de referencia ya existentes; no se inventan ubicaciones, valores o tendencias. La capa no participa en el cálculo del semáforo actual.</p>
     </section>
+    <section class="panel" id="sprPanel" hidden>
+      <h2>Pronóstico de ríos · CONAGUA SPR</h2>
+      <p class="footnote">Capa de consulta oficial independiente. No se muestran valores pronosticados hasta comprobar su extracción, fecha de emisión y vigencia. Los puntos sin coordenadas verificadas permanecen en el directorio inferior.</p>
+      <p id="sprStatus" role="status">Cargando catálogo SPR…</p>
+      <div id="sprDirectory" class="spr-directory"></div>
+      <p><a href="https://app.conagua.gob.mx/spr/bajogrijalva.html" target="_blank" rel="noopener noreferrer">Consultar producto oficial Bajo Grijalva (SPR)</a> · <a href="https://app.conagua.gob.mx/spr/pronosticogasir.html" target="_blank" rel="noopener noreferrer">Precipitación media por cuenca</a></p>
+    </section>
+
     <section class="panel">
       <h2>Datos relevantes o de preocupación</h2>
       <div id="alertsTable" class="table-wrap"></div>
