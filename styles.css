@@ -206,3 +206,9 @@ main{max-width:1500px;margin:auto;padding:14px}.summary{display:grid;grid-templa
 .spr-popup{line-height:1.4}
 .spr-popup a{color:#532c81;font-weight:750}
 @media(max-width:600px){.spr-panel h2{font-size:1.1rem}.spr-actions a{font-size:.84rem}.spr-table{min-width:650px}}
+
+/* Directorio SPR: no confundir consulta oficial con un pronóstico numérico vigente. */
+.spr-directory{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin:10px 0}
+.spr-item{border:1px solid var(--line);border-radius:9px;padding:9px 11px;background:#faf9f6;font-weight:650}
+.spr-item small{display:block;color:#6b6b6b;font-weight:400;margin-top:4px}
+#sprPanel[hidden]{display:none!important}
