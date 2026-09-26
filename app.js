@@ -4,7 +4,8 @@ const LEVEL_COLORS=["green","yellow","orange","red"], LEVEL_LABELS=["Verde","Ama
 const map=L.map("map",{zoomControl:true}).setView([17.70,-92.65],8);
 const base=L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:"&copy; OpenStreetMap contributors",crossOrigin:true}).addTo(map);
 base.on("tileerror",()=>{const s=document.getElementById("statusText");if(s)s.textContent="Mapa cargado, pero algunas teselas de OpenStreetMap no respondieron; reintentando…";});
-const levelLayer=L.layerGroup().addTo(map),rainLayer=L.layerGroup().addTo(map),upstreamLayer=L.layerGroup().addTo(map);
+const levelLayer=L.layerGroup().addTo(map),rainLayer=L.layerGroup().addTo(map),upstreamLayer=L.layerGroup().addTo(map),forecastLayer=L.layerGroup().addTo(map);
+let latestForecastData=null;
 
 
 
@@ -27,6 +28,52 @@ function levelDot(level){
 }
 function rainDot(k){
   return L.divIcon({className:"",html:`<div class="rain-dot" style="background:${k.color}"></div>`,iconSize:[20,20],iconAnchor:[10,15]});
+}
+function forecastColor(min,max){
+  const v=finite(max)?Number(max):finite(min)?Number(min):0;
+  if(v>250)return "#6a2ca0";
+  if(v>=150)return "#d62828";
+  if(v>=75)return "#f28c00";
+  if(v>=50)return "#f2d600";
+  return "#61c9a8";
+}
+function forecastLabel(min,max){
+  if(!finite(min)&&!finite(max))return "s/d";
+  if(finite(min)&&finite(max))return `${Number(min).toFixed(0)}–${Number(max).toFixed(0)} mm`;
+  return finite(min)?`≥${Number(min).toFixed(0)} mm`:`≤${Number(max).toFixed(0)} mm`;
+}
+function renderForecast(){
+  forecastLayer.clearLayers();
+  const win=document.getElementById("forecastWindow")?.value||"off";
+  if(win==="off"||!latestForecastData)return;
+  const src=latestForecastData?.smn96?.ventanas?.[win]||{};
+  for(const [name,val] of Object.entries(src)){
+    const cfg=C.forecastBasins?.[name];
+    if(!cfg)continue;
+    const min=Number(val?.min_mm),max=Number(val?.max_mm);
+    // El mapa destaca los rangos de mayor interés operativo: muy fuerte o superior.
+    if(!Number.isFinite(max)||max<50)continue;
+    const color=forecastColor(min,max);
+    const circle=L.circle(cfg.center,{
+      radius:cfg.radius,
+      color,
+      weight:2,
+      fillColor:color,
+      fillOpacity:.18,
+      opacity:.85
+    }).bindPopup(`<div class="popup-title">${esc(name)} · SMN</div><div class="popup-grid">
+      <b>Ventana</b><span>${esc(win)} h</span>
+      <b>Pronóstico</b><span>${forecastLabel(min,max)}</span>
+      <b>Emisión</b><span>${esc(latestForecastData?.smn96?.emision||"s/d")}</span>
+      <b>Fecha</b><span>${esc(latestForecastData?.smn96?.fecha||"s/d")}</span>
+      <b>Nota</b><span>Área de referencia visual para la cuenca; no representa el límite oficial.</span>
+    </div>`);
+    circle.addTo(forecastLayer);
+    L.marker(cfg.center,{
+      interactive:false,
+      icon:L.divIcon({className:"",html:`<div class="forecast-basin-label">${esc(name)} · ${forecastLabel(min,max)}</div>`})
+    }).addTo(forecastLayer);
+  }
 }
 function parseOfficial(txt){
  const out=new Map(),lines=String(txt||"").split(/\n/);
@@ -99,10 +146,11 @@ function insRainRows(doc){
 
 async function load(){
  document.getElementById("statusText").textContent="Actualizando…";
- const [levels,rainCon,weather,extra,f1,insRain,insLevels]=await Promise.all([
+ const [levels,rainCon,weather,extra,f1,insRain,insLevels,publicSources]=await Promise.all([
    fetchJSON(C.urls.levels),fetchJSON(C.urls.rainConagua),fetchJSON(C.urls.weather),fetchJSON(C.urls.weatherExtra),
-   fetchText(C.urls.fuente1),fetchJSON(C.urls.insivumehRain),fetchJSON(C.urls.insivumehLevels)
+   fetchText(C.urls.fuente1),fetchJSON(C.urls.insivumehRain),fetchJSON(C.urls.insivumehLevels),fetchJSON(C.urls.publicSources)
  ]);
+ latestForecastData=publicSources;
  const off=parseOfficial(f1),rains=[];
  for(const r of Array.isArray(rainCon)?rainCon:[]){
    if(finite(r.lluvia_hoy_desde_08_mm))rains.push({name:r.estacion,source:"CONAGUA",mm:+r.lluvia_hoy_desde_08_mm,time:r.fecha_hora,period:"HOY desde 08:00",location:"Tabasco/Chiapas"});
@@ -115,7 +163,7 @@ async function load(){
    if(finite(r.precipitacion_24h_mm))rains.push({name:r.estacion,source:"INSIVUMEH",mm:+r.precipitacion_24h_mm,time:insRain.consultado_utc,period:"24 h",location:"Guatemala"});
  }
 
- levelLayer.clearLayers();rainLayer.clearLayers();upstreamLayer.clearLayers();
+ levelLayer.clearLayers();rainLayer.clearLayers();upstreamLayer.clearLayers();forecastLayer.clearLayers();
  const alerts=[];let maxRain=null,maxLevel=-1,maxCombined=-1,shownRain=0;
  for(const rr of rains){
    const k=rainClass(rr.mm);
@@ -182,12 +230,14 @@ async function load(){
  document.getElementById("alertsTable").innerHTML=filtered.length?
  `<table><thead><tr><th>Tipo</th><th>Estación</th><th>Condición</th><th>Dato relevante</th></tr></thead><tbody>${filtered.map(a=>`<tr><td>${esc(a.type)}</td><td><b>${esc(a.name)}</b></td><td>${esc(a.status)}</td><td>${esc(a.detail)}</td></tr>`).join("")}</tbody></table>`:
  "<p>Sin datos relevantes con los criterios actuales.</p>";
+ renderForecast();
  document.getElementById("statusText").textContent="Datos consultados del Agente Hidrometeorológico · "+new Date().toLocaleString("es-MX");
 }
 document.getElementById("refreshBtn").addEventListener("click",load);
 document.getElementById("showLevels").addEventListener("change",e=>e.target.checked?levelLayer.addTo(map):map.removeLayer(levelLayer));
 document.getElementById("showRain").addEventListener("change",e=>e.target.checked?rainLayer.addTo(map):map.removeLayer(rainLayer));
 document.getElementById("showUpstream").addEventListener("change",e=>e.target.checked?upstreamLayer.addTo(map):map.removeLayer(upstreamLayer));
+document.getElementById("forecastWindow").addEventListener("change",renderForecast);
 setTimeout(()=>map.invalidateSize(true),250);window.addEventListener("resize",()=>map.invalidateSize(false));
 load();setInterval(load,15*60*1000);
 })();
