@@ -23,6 +23,19 @@ function rainClass(mm){
 const fresh=v=>{let t=Date.parse(v||"");return Number.isFinite(t)&&t<=Date.now()+300000&&Date.now()-t<=3*3600000};
 const tr=(a)=>"<tr>"+a.map(x=>"<td>"+x+"</td>").join("")+"</tr>";
 let serial=0;
+let mapMarker=null;
+function markerFor(level,current,p){
+ const map=window.TONALA_MAP, L=window.L;if(!map||!L)return;
+ if(mapMarker){map.removeLayer(mapMarker);mapMarker=null;}
+ if(!$("showTonala")?.checked)return;
+ // Ubicación de la localidad San José del Carmen, no coordenada oficial del instrumento.
+ const coordinate=[17.86948,-94.08515];
+ const color=!current?"#7b8086":level>=3?"#a51e43":level===2?"#d62828":level===1?"#f28c00":"#2f7d5c";
+ mapMarker=L.circleMarker(coordinate,{radius:10,color:"#fff",weight:2,fillColor:color,fillOpacity:.95})
+ .bindTooltip("Tonalá · San José del Carmen"+(!current?" · dato anterior":""),{direction:"top"})
+ .bindPopup('<div class="popup-title">Coatzacoalcos–Tonalá · San José del Carmen</div><p><b>Última escala:</b> '+fmt(p?.current_m)+' m</p><p><b>NAMO:</b> '+fmt(p?.namo_m)+' m</p><p><b>Fecha del informe:</b> '+esc(p?.date||"s/d")+'</p><p><b>Condición:</b> '+esc(current?"Lectura publicada hoy":"Último dato válido anterior; no genera alerta actual")+'</p><p>Ubicación aproximada de la localidad; no representa coordenada verificada del instrumento hidrométrico.</p>')
+ .addTo(map);
+}
 async function update(){
  const id=++serial;
  const box=$("tonalaOperational");if(!box)return;
@@ -72,6 +85,11 @@ async function update(){
   rainRows.push(tr([esc(w.nombre),"WeatherLink",yes&&finite(v)?(w.accumulation_status?.["24"]==="minimo_observado"?"≥ ":"")+fmt(v,1)+" mm":"s/d",human(w.observed_utc),esc(state)]));
  }
  const notes=signals.map(s=>'<p><b>'+esc(s.source)+'</b>: '+fmt(s.mm,1)+' mm/24 h · '+esc(s.label)+' · '+human(s.time)+(s.associated?' · lluvia en Puente Tonalá':' · referencia regional; no se atribuye directamente a la cuenca')+'</p>').join("");
+ const tonal=levels.find(p=>p.id==="san-jose-del-carmen");
+ markerFor(tonal?.level||0,current,tonal?{...tonal,date:mat.date}:null);
+ const banner=$("tonalaMapNotice");
+ if(banner)banner.innerHTML='<b>Coatzacoalcos–Tonalá:</b> '+esc(current?badge:"última escala "+fmt(tonal?.current_m)+" m ("+esc(mat.date||"s/d")+"), dato anterior; sin alerta hidrométrica actual.")+' <button id="focusTonala" type="button">Ver Tonalá en el mapa</button>';
+ $("focusTonala")?.addEventListener("click",()=>{if(window.TONALA_MAP){$("showTonala").checked=true;markerFor(tonal?.level||0,current,tonal?{...tonal,date:mat.date}:null);window.TONALA_MAP.setView([17.86948,-94.08515],11);mapMarker?.openPopup();}});
  const notice=current?'<span class="badge '+(maxL>=2?"danger":maxL?"warn":"ok")+'">'+esc(badge)+'</span>':'<span class="badge warn">'+esc(badge)+'</span>';
  box.innerHTML='<h2>Coatzacoalcos–Tonalá · vigilancia independiente</h2><p>'+notice+'</p>'+
  '<p class="footnote">Fuente hidrométrica: CONAGUA Golfo Centro · última emisión comprobada '+esc(mat.date||"s/d")+'. La fecha de emisión NO equivale a hora observada. Se conserva la última lectura sin elevar alertas por datos anteriores.</p>'+
@@ -82,6 +100,7 @@ async function update(){
  '<p class="footnote">Esta capa informativa es independiente del semáforo Grijalva–Usumacinta. Se evita trasladar umbrales o valores entre cuencas. Las estaciones WeatherLink conservan su adscripción original hasta comprobar coordenadas y subcuenca.</p>';
 }
 document.addEventListener("DOMContentLoaded",()=>{
+ $("showTonala")?.addEventListener("change",()=>update());
  update();
  document.getElementById("refreshBtn")?.addEventListener("click",update);
  setInterval(update,15*60*1000);
