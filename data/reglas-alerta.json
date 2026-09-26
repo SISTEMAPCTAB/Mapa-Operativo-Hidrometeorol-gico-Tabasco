@@ -1,0 +1,41 @@
+{
+  "version": "0.1-piloto",
+  "nota": "Reglas operativas preventivas. No sustituyen el semáforo oficial de CONAGUA/OCFS.",
+  "lluvia_mm_24h": [
+    {
+      "categoria": "fuerte",
+      "min": 25,
+      "max": 50
+    },
+    {
+      "categoria": "muy_fuerte",
+      "min": 50,
+      "max": 75
+    },
+    {
+      "categoria": "intensa",
+      "min": 75,
+      "max": 150
+    },
+    {
+      "categoria": "torrencial",
+      "min": 150,
+      "max": 250
+    },
+    {
+      "categoria": "extraordinaria",
+      "min": 250,
+      "max": null
+    }
+  ],
+  "nivel": {
+    "rojo": "nivel igual o superior al nivel de desbordamiento publicado",
+    "naranja": "nivel igual o superior al nivel crítico publicado",
+    "amarillo": "a 0.50 m o menos del nivel crítico"
+  },
+  "tendencia": {
+    "ascenso_relevante": "Δ24h >= 0.50 m o Δreporte >= 0.15 m",
+    "ascenso_rapido": "Δ24h >= 1.00 m o Δreporte >= 0.30 m",
+    "regla_combinada": "lluvia intensa o mayor + río en alerta/ascenso incrementa un nivel preventivo"
+  }
+}
