@@ -74,7 +74,7 @@ async function basinPolygonAt(name,cfg){
     geometryType:"esriGeometryPoint",
     inSR:"4326",
     spatialRel:"esriSpatialRelIntersects",
-    outFields:"FID,Nombre_de,Entidad_es,Nombre_d_1,CVE_C",
+    outFields:"FID,CUENCA,SUBCUENCA,RH,CLAVE,SUBCUE",
     returnGeometry:"true",
     outSR:"4326"
   });
@@ -128,7 +128,7 @@ async function renderForecast(){
     if(seq!==forecastRenderSeq)return;
     if(!feature)continue;
     const color=forecastColor(min,max);
-    const layer=esriFeatureLayer(feature,{color,weight:3,fillColor:color,fillOpacity:.28,opacity:1});
+    const layer=esriFeatureLayer(feature,{color,weight:2.5,fillColor:color,fillOpacity:.22,opacity:.95});
     if(!layer)continue;
     const ref=L.latLng(cfg.center[0],cfg.center[1]);
     if(!layer.getBounds().contains(ref)){
@@ -136,19 +136,19 @@ async function renderForecast(){
       continue;
     }
     const attrs=feature?.attributes||{};
-    const official=attrs.Nombre_de||attrs.Nombre_d_1||"Cuenca CONAGUA";
+    const official=attrs.SUBCUENCA||attrs.CUENCA||"Subcuenca CONAGUA/INEGI";
     layer.bindPopup(`<div class="popup-title">${esc(name)} · SMN</div><div class="popup-grid">
       <b>Ventana</b><span>${esc(win)} h</span>
       <b>Pronóstico</b><span>${forecastLabel(min,max)}</span>
-      <b>Cuenca hidrológica</b><span>${esc(official)} · CONAGUA</span>
+      <b>Subcuenca de referencia</b><span>${esc(official)} · CONAGUA/INEGI</span>
       <b>Emisión</b><span>${esc(latestForecastData?.smn96?.emision||"s/d")}</span>
       <b>Fecha</b><span>${esc(latestForecastData?.smn96?.fecha||"s/d")}</span>
-      <b>Nota</b><span>La geometría mostrada es la cuenca hidrológica oficial CONAGUA que contiene la referencia del producto SMN; el nombre operativo SMN puede abarcar una agrupación hidrológica distinta.</span>
+      <b>Nota</b><span>La geometría mostrada es una subcuenca oficial CONAGUA/INEGI usada para ubicar mejor la zona operativa del producto SMN; el nombre operativo del pronóstico puede abarcar más de una subcuenca.</span>
     </div>`);
     layer.bindTooltip(`${esc(name)} · ${forecastLabel(min,max)}`,{
       sticky:true,
-      direction:"auto",
-      className:"forecast-hover-label",
+      direction:"top",
+      className:"forecast-tooltip",
       opacity:.96
     });
     layer.addTo(forecastLayer);
