@@ -7,7 +7,7 @@
   <title>Mapa Operativo Hidrometeorológico · Tabasco</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="styles.css?v=2">
+  <link rel="stylesheet" href="styles.css?v=3">
 </head>
 <body>
   <header class="topbar">
@@ -27,14 +27,20 @@
     </section>
 
     <section class="legend">
-      <div><b>Alerta operativa:</b>
+      <div><b>Lluvia observada mostrada en mapa:</b>
+        <span class="chip rain-vf">Muy fuerte · 50–75 mm</span>
+        <span class="chip rain-intense">Intensa · 75–150 mm</span>
+        <span class="chip rain-torrential">Torrencial · 150–250 mm</span>
+        <span class="chip rain-extra">Extraordinaria · &gt;250 mm</span>
+      </div>
+      <div><b>Niveles / alerta operativa:</b>
         <span class="chip green">Verde</span>
         <span class="chip yellow">Amarillo</span>
         <span class="chip orange">Naranja</span>
         <span class="chip red">Rojo</span>
         <span class="chip gray">Sin dato</span>
       </div>
-      <div class="note">El color operativo combina nivel, tendencia y lluvia observada. No sustituye el semáforo oficial de CONAGUA/OCFS.</div>
+      <div class="note">El mapa sólo representa lluvia desde categoría muy fuerte. La alerta de niveles combina referencia oficial, tendencia y lluvia observada. No sustituye el semáforo oficial de CONAGUA/OCFS.</div>
     </section>
 
     <section class="controls">
@@ -46,19 +52,19 @@
     <div id="map" role="application" aria-label="Mapa operativo"></div>
 
     <section class="panel">
-      <h2>Alertas activas</h2>
+      <h2>Datos relevantes o de preocupación</h2>
       <div id="alertsTable" class="table-wrap"></div>
-      <p class="footnote">Piloto: las ubicaciones se muestran como referencia geográfica hasta sustituirlas por coordenadas oficiales de cada estación.</p>
+      <p class="footnote">Se priorizan lluvias muy fuertes o superiores, niveles con señal de atención y observaciones de Chiapas y Guatemala. Las ubicaciones siguen siendo de referencia hasta sustituirlas por coordenadas oficiales de cada estación.</p>
     </section>
   </main>
 
-  <script src="config.js?v=2"></script>
+  <script src="config.js?v=3"></script>
   <script>
   (function(){
     const status=document.getElementById('statusText');
     function loadApp(){
       const s=document.createElement('script');
-      s.src='app.js?v=2';
+      s.src='app.js?v=3';
       s.onerror=()=>{status.textContent='No fue posible cargar la aplicación del mapa.'};
       document.body.appendChild(s);
     }
