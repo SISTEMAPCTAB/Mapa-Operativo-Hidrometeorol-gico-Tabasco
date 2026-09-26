@@ -240,6 +240,8 @@ function drawSPR(doc){
  const health=document.getElementById("sprHealth");
  if(health)health.textContent=sprHealthLabel();
  if(status)status.textContent=(doc?.puntos?.length||0)+" puntos del SPR: enlaces oficiales de consulta; cifras y emisión sin extracción automática validada.";
+ const directory=document.getElementById("sprDirectory");
+ if(directory)directory.innerHTML=(doc?.puntos||[]).map(x=>{const url=x.region==="Golfo Centro"?"https://app.conagua.gob.mx/spr/gc.html":"https://app.conagua.gob.mx/spr/bajogrijalva.html";return `<div class="spr-station"><span class="spr-info"><strong>${esc(x.nombre)}</strong><small>${esc(x.region||"Bajo Grijalva")}${x.clave?" · "+esc(x.clave):""} · emisión no validada</small></span><a href="${url}" target="_blank" rel="noopener noreferrer">Consultar ↗</a></div>`}).join("");
  if(!on)return;
  const list=Array.isArray(doc?.puntos)?doc.puntos:[];
  for(const x of list){
