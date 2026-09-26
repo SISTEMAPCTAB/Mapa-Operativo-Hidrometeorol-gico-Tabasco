@@ -212,7 +212,7 @@ function popupLevel(r,off,sev,rain){
 function popupRain(r,k){
  return `<div class="popup-title">${esc(r.name)}</div><div class="popup-grid"><b>Fuente</b><span>${esc(r.source)}</span>
  <b>Acumulado</b><span>${fmt(r.mm,1)} mm</span><b>Periodo</b><span>${esc(r.period)}</span>
- <b>Categoría</b><span>${esc(k.label)}</span><b>Hora</b><span>${esc(r.time||"s/d")}</span></div>`;
+ <b>Categoría</b><span>${esc(k.label)}</span><b>Hora</b><span>${esc(r.time||"s/d")}</span>${norm(r.name)==="juarez pcivilchiapas"?`<b>Ubicación</b><span>Cabecera de Juárez, Chiapas (punto referencial; coordenadas instrumentales pendientes de validar).</span><b>Calidad 24 h</b><span>Mínimo observado; consultar hora de la última lectura.</span>`:""}</div>`;
 }
 function stationRainForLevel(r,rains){
   const key=norm(r.estacion);
