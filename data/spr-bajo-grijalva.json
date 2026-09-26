@@ -1,5 +1,5 @@
 {
-  "version": "1.0",
+  "version": "1.1",
   "fuente": "CONAGUA - Sistema de Pronóstico en Ríos",
   "url": "https://app.conagua.gob.mx/spr/bajogrijalva.html",
   "precipitacion_cuenca": "https://app.conagua.gob.mx/spr/pronosticogasir.html",
@@ -9,79 +9,103 @@
       "nombre": "Tapijulapa",
       "pronostico": null,
       "emision": null,
-      "estado": "Consulta en portal oficial; sin dato estructurado verificado"
+      "estado": "Consulta en portal oficial; sin dato estructurado verificado",
+      "region": "Bajo Grijalva"
     },
     {
       "nombre": "Samaria",
       "pronostico": null,
       "emision": null,
-      "estado": "Consulta en portal oficial; sin dato estructurado verificado"
+      "estado": "Consulta en portal oficial; sin dato estructurado verificado",
+      "region": "Bajo Grijalva"
     },
     {
       "nombre": "González",
       "pronostico": null,
       "emision": null,
-      "estado": "Consulta en portal oficial; sin dato estructurado verificado"
+      "estado": "Consulta en portal oficial; sin dato estructurado verificado",
+      "region": "Bajo Grijalva"
     },
     {
       "nombre": "San Joaquín",
       "pronostico": null,
       "emision": null,
-      "estado": "Consulta en portal oficial; sin dato estructurado verificado"
+      "estado": "Consulta en portal oficial; sin dato estructurado verificado",
+      "region": "Bajo Grijalva"
     },
     {
       "nombre": "Gaviotas",
       "pronostico": null,
       "emision": null,
-      "estado": "Consulta en portal oficial; sin dato estructurado verificado"
+      "estado": "Consulta en portal oficial; sin dato estructurado verificado",
+      "region": "Bajo Grijalva"
     },
     {
       "nombre": "Censo",
       "pronostico": null,
       "emision": null,
-      "estado": "Consulta en portal oficial; sin dato estructurado verificado"
+      "estado": "Consulta en portal oficial; sin dato estructurado verificado",
+      "region": "Bajo Grijalva"
     },
     {
       "nombre": "Sabanilla",
       "pronostico": null,
       "emision": null,
-      "estado": "Consulta en portal oficial; sin dato estructurado verificado"
+      "estado": "Consulta en portal oficial; sin dato estructurado verificado",
+      "region": "Bajo Grijalva"
     },
     {
       "nombre": "Porvenir",
       "pronostico": null,
       "emision": null,
-      "estado": "Consulta en portal oficial; sin dato estructurado verificado"
+      "estado": "Consulta en portal oficial; sin dato estructurado verificado",
+      "region": "Bajo Grijalva"
     },
     {
       "nombre": "Platanar",
       "pronostico": null,
       "emision": null,
-      "estado": "Consulta en portal oficial; sin dato estructurado verificado"
+      "estado": "Consulta en portal oficial; sin dato estructurado verificado",
+      "region": "Bajo Grijalva"
     },
     {
       "nombre": "Pueblo Nuevo",
       "pronostico": null,
       "emision": null,
-      "estado": "Consulta en portal oficial; sin dato estructurado verificado"
+      "estado": "Consulta en portal oficial; sin dato estructurado verificado",
+      "region": "Bajo Grijalva"
     },
     {
       "nombre": "Puyacatengo",
       "pronostico": null,
       "emision": null,
-      "estado": "Consulta en portal oficial; sin dato estructurado verificado"
+      "estado": "Consulta en portal oficial; sin dato estructurado verificado",
+      "region": "Bajo Grijalva"
     },
     {
       "nombre": "Teapa",
       "pronostico": null,
       "emision": null,
-      "estado": "Consulta en portal oficial; sin dato estructurado verificado"
+      "estado": "Consulta en portal oficial; sin dato estructurado verificado",
+      "region": "Bajo Grijalva"
     },
     {
       "nombre": "Grijalva",
       "pronostico": null,
       "emision": null,
-      "estado": "Consulta en portal oficial; sin dato estructurado verificado"
+      "estado": "Consulta en portal oficial; sin dato estructurado verificado",
+      "region": "Bajo Grijalva"
+    },
+    {
+      "nombre": "San José del Carmen",
+      "clave": "JDCVC",
+      "rio": "Tonalá",
+      "region": "Golfo Centro",
+      "pronostico": null,
+      "emision": null,
+      "coordenadas": null,
+      "estado": "Punto oficial confirmado; ubicación precisa y pronóstico numérico sin validar",
+      "url": "https://app.conagua.gob.mx/spr/gc.html"
     }
   ]
 }
