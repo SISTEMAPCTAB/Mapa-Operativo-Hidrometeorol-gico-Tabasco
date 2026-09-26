@@ -1,5 +1,38 @@
 {
-  "checked_at": null,
-  "scope": "Verifica accesibilidad HTTP de fuentes oficiales; no certifica vigencia ni valores del pronóstico",
-  "sources": []
+  "checked_at": "2026-09-26T17:51:50.734028+00:00",
+  "scope": "Solo disponibilidad de página HTTP y contenido básico; NO confirma emisión nueva, cifra, serie hidrológica ni pronóstico vigente",
+  "sources": [
+    {
+      "name": "Portal SPR",
+      "url": "https://app.conagua.gob.mx/spr/index.html",
+      "http_ok": false,
+      "content_marker_ok": false,
+      "http_status": null,
+      "error": "HTTPError: HTTP Error 403: Forbidden"
+    },
+    {
+      "name": "Bajo Grijalva",
+      "url": "https://app.conagua.gob.mx/spr/bajogrijalva.html",
+      "http_ok": false,
+      "content_marker_ok": false,
+      "http_status": null,
+      "error": "HTTPError: HTTP Error 302: The HTTP server returned a redirect error that would lead to an infinite loop.\nThe last 30x error message was:\nFound"
+    },
+    {
+      "name": "Golfo Centro / Tonalá",
+      "url": "https://app.conagua.gob.mx/spr/gc.html",
+      "http_ok": false,
+      "content_marker_ok": false,
+      "http_status": null,
+      "error": "HTTPError: HTTP Error 302: The HTTP server returned a redirect error that would lead to an infinite loop.\nThe last 30x error message was:\nFound"
+    },
+    {
+      "name": "Precipitación media por cuenca",
+      "url": "https://app.conagua.gob.mx/spr/pronosticogasir.html",
+      "http_ok": false,
+      "content_marker_ok": false,
+      "http_status": null,
+      "error": "HTTPError: HTTP Error 302: The HTTP server returned a redirect error that would lead to an infinite loop.\nThe last 30x error message was:\nFound"
+    }
+  ]
 }
