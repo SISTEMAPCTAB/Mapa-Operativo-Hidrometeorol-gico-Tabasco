@@ -1,6 +1,10 @@
 name: Verificar accesibilidad SPR CONAGUA
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/verificar-spr.yml'
   schedule:
     # 12:35 y 15:35 de Ciudad de México (UTC-6)
     - cron: "35 18,21 * * *"
