@@ -12,33 +12,35 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Inspeccionar páginas de Red Hidrográfica INEGI
+      - name: Inspeccionar API dinámica de Biblioteca INEGI
         run: |
           python - <<'PY'
-          import requests, re, html
-          urls = [
-            "https://www.inegi.org.mx/app/biblioteca/ficha.html?upc=702825006939",
-            "https://www.inegi.org.mx/app/biblioteca/ficha.html?upc=702825006943",
-            "https://www.inegi.org.mx/app/biblioteca/ficha.html?upc=889463130314",
+          import requests,re
+          base="https://www.inegi.org.mx/app/biblioteca/"
+          js=base+"scripts/fichasn_core.min.js?v=2.0.4x"
+          s=requests.Session(); s.headers.update({"User-Agent":"Mozilla/5.0"})
+          r=s.get(js,timeout=30)
+          print("JS",r.status_code,"LEN",len(r.text))
+          txt=r.text
+          pats=[
+            r'https?://[^"\' ]+',
+            r'[^"\']+(?:ajax|api|servicio|service|descarga|download|producto|ficha)[^"\']*',
+            r'\$\.ajax\((.{0,1200})',
+            r'fetch\((.{0,700})'
           ]
-          s=requests.Session()
-          s.headers.update({"User-Agent":"Mozilla/5.0"})
-          for url in urls:
-              print("\nPAGE",url)
-              r=s.get(url,timeout=30)
-              print("HTTP",r.status_code,"LEN",len(r.text),"FINAL",r.url)
-              text=html.unescape(r.text)
-              for pat in [r'https?://[^"\'<> ]+', r'[^"\'<> ]+\.zip[^"\'<> ]*', r'[^"\'<> ]+(?:descarga|download)[^"\'<> ]*']:
-                  vals=[]
-                  for m in re.findall(pat,text,re.I):
-                      if m not in vals: vals.append(m)
-                  for v in vals[:60]:
-                      print("LINK",v[:500])
-              print("SCRIPTS")
-              for src in re.findall(r'<script[^>]+src=["\']([^"\']+)',text,re.I)[:80]:
-                  print("SCRIPT",src)
-              for keyword in ["702825006939","889463130314","RH30Aa","descarga","download","urlArchivo","archivo"]:
-                  pos=text.lower().find(keyword.lower())
-                  if pos>=0:
-                      print("SNIP",keyword,text[max(0,pos-400):pos+900].replace("\n"," ")[:1400])
+          for pat in pats:
+              vals=[]
+              for m in re.findall(pat,txt,re.I):
+                  v=m if isinstance(m,str) else str(m)
+                  if v not in vals: vals.append(v)
+              for v in vals[:120]: print("JS_MATCH",v[:1800])
+
+          for kw in ["extFiles_1","linkDescargas","upc","idProducto","archivo","url","Get","Producto"]:
+              pos=0
+              count=0
+              while True:
+                  pos=txt.lower().find(kw.lower(),pos)
+                  if pos<0 or count>=12: break
+                  print("JS_SNIP",kw,txt[max(0,pos-800):pos+1800])
+                  pos+=len(kw); count+=1
           PY
