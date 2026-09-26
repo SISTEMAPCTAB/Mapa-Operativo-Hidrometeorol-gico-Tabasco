@@ -46,8 +46,9 @@ function forecastLabel(min,max){
   return finite(min)?`≥${Number(min).toFixed(0)} mm`:`≤${Number(max).toFixed(0)} mm`;
 }
 const forecastGeomCache=new Map();
+let forecastMapping=null;
 
-function arcgisJsonp(params){
+function arcgisJsonpService(url,params){
   return new Promise((resolve,reject)=>{
     const cb="__arcgis_"+Date.now()+"_"+Math.random().toString(36).slice(2);
     const script=document.createElement("script");
@@ -56,41 +57,38 @@ function arcgisJsonp(params){
     window[cb]=(data)=>{cleanup();resolve(data)};
     params.set("f","json");
     params.set("callback",cb);
-    script.src=C.conaguaBasinsService+"?"+params.toString();
+    script.src=url+"?"+params.toString();
     script.onerror=()=>{cleanup();reject(new Error("jsonp error"))};
     document.head.appendChild(script);
   });
 }
 
-async function basinAtPoint(lat,lon){
-  const key=lat.toFixed(5)+","+lon.toFixed(5);
-  if(forecastGeomCache.has(key))return forecastGeomCache.get(key);
+async function subbasinByCode(code){
+  if(forecastGeomCache.has(code))return forecastGeomCache.get(code);
   const params=new URLSearchParams({
-    geometry:`${lon},${lat}`,
-    geometryType:"esriGeometryPoint",
-    inSR:"4326",
-    spatialRel:"esriSpatialRelIntersects",
-    outFields:"FID,CODIGO,TOPONIMO,REG_HID,SUB_HID",
+    where:`SUBCUE='${code.replace(/'/g,"''")}'`,
+    outFields:"FID,CLAVE,RH,CVE_CUEN,CUENCA,SUBCUE,SUBCUENCA,KM2",
     returnGeometry:"true",
     outSR:"4326"
   });
 
   try{
-    const r=await fetch(C.conaguaBasinsService+"?"+params.toString()+"&f=json",{cache:"no-store"});
+    const r=await fetch(C.conaguaSubbasinsService+"?"+params.toString()+"&f=json",{cache:"force-cache"});
     if(r.ok){
       const d=await r.json();
       const ft=d?.features?.[0]||null;
-      if(ft){forecastGeomCache.set(key,ft);return ft;}
+      if(ft){forecastGeomCache.set(code,ft);return ft}
     }
   }catch{}
 
   try{
-    const d=await arcgisJsonp(params);
+    const d=await arcgisJsonpService(C.conaguaSubbasinsService,params);
     const ft=d?.features?.[0]||null;
-    forecastGeomCache.set(key,ft);
+    forecastGeomCache.set(code,ft);
     return ft;
-  }catch{
-    forecastGeomCache.set(key,null);
+  }catch(e){
+    console.warn("Subcuenca no disponible",code,e);
+    forecastGeomCache.set(code,null);
     return null;
   }
 }
@@ -102,26 +100,28 @@ function esriFeatureLayer(feature,style){
   return L.polygon(latlngs,{...style,pane:"forecastPane"});
 }
 
-async function basinGroup(name,cfg,style){
-  const anchors=Array.isArray(cfg.anchors)&&cfg.anchors.length?cfg.anchors:[cfg.center];
-  const seen=new Set(),layers=[],names=[];
-  for(const [lat,lon] of anchors){
-    const ft=await basinAtPoint(lat,lon);
-    if(!ft)continue;
-    const attrs=ft.attributes||{};
-    const id=String(attrs.CODIGO||attrs.FID||JSON.stringify(ft.geometry).slice(0,80));
-    if(seen.has(id))continue;
-    seen.add(id);
-    const layer=esriFeatureLayer(ft,style);
-    if(layer){
-      layers.push(layer);
-      if(attrs.TOPONIMO)names.push(attrs.TOPONIMO);
-    }
+async function zoneSubbasinLayers(name,color){
+  const z=forecastMapping?.zonas?.[name];
+  if(!z?.subcuencas?.length)return {layers:[],loaded:[],missing:[]};
+  const layers=[],loaded=[],missing=[];
+  for(const sb of z.subcuencas){
+    const ft=await subbasinByCode(sb.codigo);
+    if(!ft){missing.push(sb.codigo);continue}
+    const layer=esriFeatureLayer(ft,{
+      color,
+      weight:1.7,
+      fillColor:color,
+      fillOpacity:.18,
+      opacity:.88
+    });
+    if(!layer){missing.push(sb.codigo);continue}
+    layers.push(layer);
+    const a=ft.attributes||{};
+    loaded.push({codigo:sb.codigo,nombre:a.SUBCUENCA||sb.nombre||sb.codigo});
   }
-  return {layers,names:[...new Set(names)]};
+  return {layers,loaded,missing};
 }
 
-let forecastRenderSeq=0;
 async function renderForecast(){
   const seq=++forecastRenderSeq;
   forecastLayer.clearLayers();
@@ -141,30 +141,43 @@ async function renderForecast(){
     if(!Number.isFinite(max)||max<50)continue;
 
     const color=forecastColor(min,max);
-    const marker=L.marker(cfg.center,{
-      title:name,
-      icon:L.divIcon({
-        className:"",
-        html:`<div class="forecast-diamond" style="background:${color}"></div>`,
-        iconSize:[20,20],
-        iconAnchor:[10,10]
-      })
-    }).bindPopup(`<div class="popup-title">${esc(name)} · SMN</div><div class="popup-grid">
-      <b>Ventana</b><span>${esc(win)} h</span>
-      <b>Pronóstico</b><span>${forecastLabel(min,max)}</span>
-      <b>Cartografía</b><span>Polígono temporalmente desactivado</span>
-      <b>Motivo</b><span>Se está sustituyendo por unión de subcuencas RH30 verificadas para evitar áreas desfasadas.</span>
-    </div>`);
+    const g=await zoneSubbasinLayers(name,color);
+    if(seq!==forecastRenderSeq)return;
 
-    marker.addTo(forecastLayer);
-    summary.push({name,min,max,color});
-    rendered++;
+    if(g.layers.length){
+      const fg=L.featureGroup(g.layers);
+      const names=g.loaded.map(x=>x.nombre).join(", ");
+      fg.bindPopup(`<div class="popup-title">${esc(name)} · SMN</div><div class="popup-grid">
+        <b>Ventana</b><span>${esc(win)} h</span>
+        <b>Pronóstico</b><span>${forecastLabel(min,max)}</span>
+        <b>Subcuencas RH30</b><span>${esc(names||"s/d")}</span>
+        <b>Fuente cartográfica</b><span>CONAGUA SIGA / INEGI 1:250 000</span>
+        <b>Emisión</b><span>${esc(latestForecastData?.smn96?.emision||"s/d")}</span>
+        <b>Nota</b><span>Agrupación operativa aproximada para representar la zona SMN. No es una delimitación oficial publicada por SMN.</span>
+      </div>`);
+      fg.bindTooltip(`${esc(name)} · ${forecastLabel(min,max)}`,{sticky:true,direction:"top",className:"forecast-tooltip",opacity:.96});
+      fg.addTo(forecastLayer);
+      rendered++;
+      summary.push({name,min,max,color,detail:g.loaded.length+" subcuenca(s) RH30"});
+    }else{
+      const marker=L.marker(cfg.center,{
+        title:name,
+        icon:L.divIcon({className:"",html:`<div class="forecast-diamond" style="background:${color}"></div>`,iconSize:[20,20],iconAnchor:[10,10]})
+      }).bindPopup(`<div class="popup-title">${esc(name)} · SMN</div><div class="popup-grid">
+        <b>Ventana</b><span>${esc(win)} h</span>
+        <b>Pronóstico</b><span>${forecastLabel(min,max)}</span>
+        <b>Cartografía</b><span>Subcuenca RH30 no disponible en esta consulta; se conserva el punto operativo.</span>
+      </div>`);
+      marker.addTo(forecastLayer);
+      rendered++;
+      summary.push({name,min,max,color,detail:"punto operativo"});
+    }
   }
 
   if(box){
     box.innerHTML=summary.length
       ? `<div class="forecast-summary-title">Pronóstico SMN · ${esc(win)} h</div>`+
-        summary.map(x=>`<div class="forecast-summary-row"><span class="forecast-swatch" style="background:${x.color}"></span><span><b>${esc(x.name)}</b> · ${forecastLabel(x.min,x.max)}</span></div>`).join("")
+        summary.map(x=>`<div class="forecast-summary-row"><span class="forecast-swatch" style="background:${x.color}"></span><span><b>${esc(x.name)}</b> · ${forecastLabel(x.min,x.max)} <small>· ${esc(x.detail)}</small></span></div>`).join("")
       : `<div class="forecast-summary-title">Pronóstico SMN · ${esc(win)} h</div><div class="forecast-summary-empty">Sin rangos ≥50 mm en esta ventana.</div>`;
   }
 
@@ -246,11 +259,12 @@ function insRainRows(doc){
 
 async function load(){
  document.getElementById("statusText").textContent="Actualizando…";
- const [levels,rainCon,weather,extra,f1,insRain,insLevels,publicSources]=await Promise.all([
+ const [levels,rainCon,weather,extra,f1,insRain,insLevels,publicSources,mapping]=await Promise.all([
    fetchJSON(C.urls.levels),fetchJSON(C.urls.rainConagua),fetchJSON(C.urls.weather),fetchJSON(C.urls.weatherExtra),
-   fetchText(C.urls.fuente1),fetchJSON(C.urls.insivumehRain),fetchJSON(C.urls.insivumehLevels),fetchJSON(C.urls.publicSources)
+   fetchText(C.urls.fuente1),fetchJSON(C.urls.insivumehRain),fetchJSON(C.urls.insivumehLevels),fetchJSON(C.urls.publicSources),fetchJSON(C.urls.forecastMapping)
  ]);
  latestForecastData=publicSources;
+ forecastMapping=mapping;
  const off=parseOfficial(f1),rains=[];
  for(const r of Array.isArray(rainCon)?rainCon:[]){
    if(finite(r.lluvia_hoy_desde_08_mm))rains.push({name:r.estacion,source:"CONAGUA",mm:+r.lluvia_hoy_desde_08_mm,time:r.fecha_hora,period:"HOY desde 08:00",location:"Tabasco/Chiapas"});
