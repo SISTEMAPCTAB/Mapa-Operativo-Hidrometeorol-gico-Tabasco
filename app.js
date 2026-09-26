@@ -6,19 +6,7 @@ const base=L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom
 base.on("tileerror",()=>{const s=document.getElementById("statusText");if(s)s.textContent="Mapa cargado, pero algunas teselas de OpenStreetMap no respondieron; reintentando…";});
 const levelLayer=L.layerGroup().addTo(map),rainLayer=L.layerGroup().addTo(map),upstreamLayer=L.layerGroup().addTo(map);
 
-const symbolLegend=L.control({position:"bottomright"});
-symbolLegend.onAdd=function(){
-  const div=L.DomUtil.create("div","map-symbol-legend");
-  div.innerHTML=`
-    <div class="map-symbol-title">Simbología</div>
-    <div class="map-symbol-row"><span class="legend-circle"></span><span><b>Círculo/gota:</b> estación de lluvia</span></div>
-    <div class="map-symbol-row"><span class="legend-triangle"></span><span><b>Triángulo:</b> estación hidrométrica / nivel</span></div>
-    <div class="map-symbol-row"><span class="legend-upstream">GT/CH</span><span><b>Aguas arriba:</b> Chiapas y Guatemala</span></div>
-  `;
-  L.DomEvent.disableClickPropagation(div);
-  return div;
-};
-symbolLegend.addTo(map);
+
 
 const norm=s=>String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\s+/g," ").trim();
 const finite=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -63,7 +51,7 @@ function levelSeverity(r,off){
 function combined(levelSev,rainSev){
  const rLevel=rainSev?.level??-1;
  let x=Math.max(levelSev.level,Math.min(3,rLevel)),reasons=[...levelSev.reasons];
- if(rainSev&&rainSev.level>=1)reasons.push("lluvia "+rainSev.label.toLowerCase());
+ if(rainSev&&rainSev.level>=1)reasons.push("lluvia "+rainSev.label.toLowerCase()+" en la misma estación");
  if(levelSev.level>=1&&rLevel>=2)x=Math.min(3,Math.max(x,levelSev.level+1));
  return{level:x,reasons};
 }
@@ -72,7 +60,7 @@ function popupLevel(r,off,sev,rain){
  <b>Río</b><span>${esc(r.rio)}</span><b>Nivel</b><span>${fmt(r.ultimo_nivel)} m</span>
  <b>Tendencia</b><span>${esc(r.tendencia||"s/d")}</span><b>Δ reporte</b><span>${fmt(r.delta_reporte)} m</span>
  <b>Δ24 h</b><span>${fmt(r.delta_24h)} m</span><b>Crítico</b><span>${off?fmt(off.critical)+" m":"s/d"}</span>
- <b>Desbordamiento</b><span>${off?fmt(off.overflow)+" m":"s/d"}</span><b>Lluvia asociada</b><span>${rain?fmt(rain.mm,1)+" mm · "+esc(rain.label):"s/d"}</span>
+ <b>Desbordamiento</b><span>${off?fmt(off.overflow)+" m":"s/d"}</span><b>Lluvia en estación</b><span>${rain?fmt(rain.mm,1)+" mm · "+esc(rain.source)+" · "+esc(rain.period):"s/d"}</span>
  <b>Alerta operativa</b><span><strong>${sev.level<0?"Sin dato":LEVEL_LABELS[sev.level]}</strong></span>
  <b>Razón</b><span>${esc(sev.reasons.join(" · ")||"seguimiento ordinario")}</span></div>`;
 }
@@ -81,10 +69,17 @@ function popupRain(r,k){
  <b>Acumulado</b><span>${fmt(r.mm,1)} mm</span><b>Periodo</b><span>${esc(r.period)}</span>
  <b>Categoría</b><span>${esc(k.label)}</span><b>Hora</b><span>${esc(r.time||"s/d")}</span></div>`;
 }
-function nearestRainForLevel(r,rains){
- const c=coord(r.estacion);if(!c)return null;let best=null,dist=1e9;
- for(const rr of rains){const p=coord(rr.name);if(!p||!finite(rr.mm))continue;const d=(p[0]-c[0])**2+(p[1]-c[1])**2;if(d<dist){dist=d;best=rr}}
- return best&&dist<0.5?{...best,...rainClass(best.mm)}:null;
+function stationRainForLevel(r,rains){
+  const key=norm(r.estacion);
+  const matches=rains.filter(rr=>norm(rr.name)===key&&finite(rr.mm));
+  if(!matches.length)return null;
+  // Si hay más de una fuente para la misma estación, usar el dato más reciente
+  // y conservar la fuente y el periodo para que el usuario sepa qué representa.
+  const best=matches.sort((a,b)=>{
+    const ta=Date.parse(a.time||"")||0,tb=Date.parse(b.time||"")||0;
+    return tb-ta;
+  })[0];
+  return {...best,...rainClass(best.mm),relation:"misma estación"};
 }
 function isChiapasOrGuatemala(r){
  const t=norm((r.name||"")+" "+(r.source||"")+" "+(r.location||""));
@@ -136,7 +131,7 @@ async function load(){
  }
  for(const r of Array.isArray(levels)?levels:[]){
    const p=coord(r.estacion);if(!p)continue;
-   const ls=levelSeverity(r,off.get(norm(r.estacion))),near=nearestRainForLevel(r,rains),cs=combined(ls,near);
+   const ls=levelSeverity(r,off.get(norm(r.estacion))),near=stationRainForLevel(r,rains),cs=combined(ls,near);
    maxLevel=Math.max(maxLevel,ls.level);maxCombined=Math.max(maxCombined,cs.level);
    L.marker(p,{icon:levelDot(cs.level),title:r.estacion}).bindPopup(popupLevel(r,off.get(norm(r.estacion)),cs,near)).addTo(levelLayer);
    if(cs.level>=1)alerts.push({type:"Río",name:r.estacion,status:LEVEL_LABELS[cs.level],detail:cs.reasons.join(" · "),priority:5+cs.level});
