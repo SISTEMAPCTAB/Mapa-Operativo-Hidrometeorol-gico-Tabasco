@@ -6,6 +6,20 @@ const base=L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom
 base.on("tileerror",()=>{const s=document.getElementById("statusText");if(s)s.textContent="Mapa cargado, pero algunas teselas de OpenStreetMap no respondieron; reintentando…";});
 const levelLayer=L.layerGroup().addTo(map),rainLayer=L.layerGroup().addTo(map),upstreamLayer=L.layerGroup().addTo(map);
 
+const symbolLegend=L.control({position:"bottomright"});
+symbolLegend.onAdd=function(){
+  const div=L.DomUtil.create("div","map-symbol-legend");
+  div.innerHTML=`
+    <div class="map-symbol-title">Simbología</div>
+    <div class="map-symbol-row"><span class="legend-circle"></span><span><b>Círculo/gota:</b> estación de lluvia</span></div>
+    <div class="map-symbol-row"><span class="legend-triangle"></span><span><b>Triángulo:</b> estación hidrométrica / nivel</span></div>
+    <div class="map-symbol-row"><span class="legend-upstream">GT/CH</span><span><b>Aguas arriba:</b> Chiapas y Guatemala</span></div>
+  `;
+  L.DomEvent.disableClickPropagation(div);
+  return div;
+};
+symbolLegend.addTo(map);
+
 const norm=s=>String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\s+/g," ").trim();
 const finite=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
