@@ -319,7 +319,7 @@ async function load(){
  alerts.push(...insRainRows(insRain),...insLevelRows(insLevels));
 
  const levelText=x=>x<0?"Sin dato":LEVEL_LABELS[x];
- document.getElementById("rainAlert").textContent=maxRain?maxRain.label:"Sin lluvia ≥50 mm";
+ document.getElementById("rainAlert").textContent=maxRain?"Precipitación relevante":"Sin lluvia ≥50 mm";
  document.getElementById("levelAlert").textContent=levelText(maxLevel);
  document.getElementById("combinedAlert").textContent=levelText(maxCombined);
  document.getElementById("rainDetail").textContent=shownRain+" puntos ≥50 mm en mapa";
