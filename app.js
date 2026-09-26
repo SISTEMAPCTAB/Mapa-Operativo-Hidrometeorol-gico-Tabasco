@@ -4,6 +4,7 @@ const LEVEL_COLORS=["green","yellow","orange","red"], LEVEL_LABELS=["Verde","Ama
 const map=L.map("map",{zoomControl:true}).setView([17.70,-92.65],8);
 // Exposición mínima para la capa Tonalá; los cálculos existentes no se modifican.
 window.TONALA_MAP=map;
+window.dispatchEvent(new Event("tonala-map-ready"));
 const base=L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:"&copy; OpenStreetMap contributors",crossOrigin:true}).addTo(map);
 base.on("tileerror",()=>{const s=document.getElementById("statusText");if(s)s.textContent="Mapa cargado, pero algunas teselas de OpenStreetMap no respondieron; reintentando…";});
 map.createPane("forecastPane");
