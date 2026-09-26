@@ -41,9 +41,11 @@ jobs:
                       codes.append(code)
                   zone_by_code.setdefault(code, []).append(zone)
 
-          where = "SUBCUE IN (" + ",".join("'" + c.replace("'","''") + "'" for c in codes) + ")"
+          # En esta capa CLAVE identifica la región hidrológica (RH30).
+          # SUBCUE puede venir como código corto; por ello descargamos RH30 y
+          # normalizamos localmente antes de seleccionar las subcuencas deseadas.
           payload = {
-              "where": where,
+              "where": "CLAVE='RH30'",
               "outFields": "FID,CLAVE,RH,CVE_CUEN,CUENCA,SUBCUE,SUBCUENCA,KM2",
               "returnGeometry": "true",
               "outSR": "4326",
@@ -52,7 +54,7 @@ jobs:
 
           session = requests.Session()
           session.headers.update({"User-Agent":"Mozilla/5.0 MapaOperativoIPCET/1.0"})
-          r = session.post(service, data=payload, timeout=25)
+          r = session.post(service, data=payload, timeout=35)
           print("HTTP", r.status_code)
           r.raise_for_status()
           data = r.json()
@@ -62,17 +64,41 @@ jobs:
 
           features = []
           found = set()
+          seen_raw = []
+          wanted_set = set(codes)
+
+          def normalize_code(attrs):
+              raw = str(attrs.get("SUBCUE") or "").strip()
+              cve = str(attrs.get("CVE_CUEN") or "").strip()
+              if raw.upper().startswith("RH30"):
+                  return raw
+              # Algunos servicios guardan la clave como Da, Dh, Ea, etc.
+              if len(raw) in (1,2,3):
+                  return "RH30" + raw
+              # Otros separan cuenca (D) y subcuenca (h).
+              if cve and raw and not raw.upper().startswith("RH"):
+                  if len(cve)==1 and len(raw)==1:
+                      return "RH30" + cve + raw
+              return raw
+
           for ft in data.get("features") or []:
               attrs = ft.get("attributes") or {}
-              code = attrs.get("SUBCUE")
+              raw = str(attrs.get("SUBCUE") or "")
+              if raw and len(seen_raw)<25:
+                  seen_raw.append((raw, attrs.get("CVE_CUEN"), attrs.get("SUBCUENCA")))
+              code = normalize_code(attrs)
+              if code not in wanted_set:
+                  continue
               rings = (ft.get("geometry") or {}).get("rings") or []
-              if not code or not rings:
+              if not rings:
                   continue
               found.add(code)
+              props = dict(attrs)
+              props["SUBCUE_CANON"] = code
               features.append({
                   "type":"Feature",
                   "properties": {
-                      **attrs,
+                      **props,
                       "zonas_smn": zone_by_code.get(code, [])
                   },
                   "geometry":{
@@ -81,6 +107,7 @@ jobs:
                   }
               })
 
+          print("Muestras SUBCUE:", seen_raw)
           print("Solicitadas:", len(codes), "Encontradas:", len(found))
           print("Faltantes:", sorted(set(codes)-found))
 
