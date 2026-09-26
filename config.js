@@ -18,6 +18,7 @@ window.MAP_CONFIG={
     {min:0,level:0,label:"Menor a muy fuerte",color:"#9aa0a6"}
   ],
   rainDisplayMinMm:50,
+  conaguaBasinsService:"https://sigagis.conagua.gob.mx/ArcGIS/rest/services/sigacua18/Cuencas/MapServer/0/query",
   forecastBasins:{
     "Peñitas":{center:[17.43,-93.56],radius:52000},
     "Malpaso":{center:[17.18,-93.60],radius:65000},
