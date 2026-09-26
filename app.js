@@ -76,7 +76,7 @@ function geojsonZoneLayer(name,color){
 function forecastIssueMeta(doc){
  const raw=String(doc?.fecha||"").trim(),time=String(doc?.emision||"").trim();
  const months={enero:1,febrero:2,marzo:3,abril:4,mayo:5,junio:6,julio:7,agosto:8,septiembre:9,setiembre:9,octubre:10,noviembre:11,diciembre:12};
- const match=raw.toLowerCase().match(/(\\d{1,2})\\s+de\\s+([a-záéíóú]+)\\s+del?\\s+(\\d{4})/i);
+ const match=raw.toLowerCase().match(/(\d{1,2})\s+de\s+([a-záéíóú]+)\s+del?\s+(\d{4})/i);
  let key="";
  if(match&&months[match[2]])key=match[3]+"-"+String(months[match[2]]).padStart(2,"0")+"-"+match[1].padStart(2,"0");
  const local=new Intl.DateTimeFormat("en-US",{timeZone:"America/Mexico_City",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());
