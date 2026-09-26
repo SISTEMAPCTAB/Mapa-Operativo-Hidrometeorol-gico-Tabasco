@@ -1,0 +1,56 @@
+name: Verificar accesibilidad SPR CONAGUA
+on:
+  workflow_dispatch:
+  schedule:
+    # 12:35 y 15:35 de Ciudad de México (UTC-6)
+    - cron: "35 18,21 * * *"
+permissions:
+  contents: write
+concurrency:
+  group: spr-health
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verificar páginas oficiales, sin inferir pronóstico ni fecha de emisión
+        run: |
+          python - <<'PY'
+          import json, urllib.request, urllib.error, datetime, pathlib
+          sources=[
+           ("Portal SPR","https://app.conagua.gob.mx/spr/index.html",""),
+           ("Bajo Grijalva","https://app.conagua.gob.mx/spr/bajogrijalva.html","Tapijulapa"),
+           ("Golfo Centro / Tonalá","https://app.conagua.gob.mx/spr/gc.html","JDCVC"),
+           ("Precipitación media por cuenca","https://app.conagua.gob.mx/spr/pronosticogasir.html","")
+          ]
+          rows=[]
+          for name,url,marker in sources:
+           row={"name":name,"url":url,"http_ok":False,"content_marker_ok":False,"http_status":None}
+           try:
+            req=urllib.request.Request(url,headers={"User-Agent":"Mozilla/5.0 IPCET-SPR-Monitor/1.0","Cache-Control":"no-cache"})
+            with urllib.request.urlopen(req,timeout=18) as res:
+             b=res.read(500000)
+             s=b.decode("utf-8",errors="replace")
+             row["http_status"]=res.status
+             row["http_ok"]=res.status==200 and bool(b.strip())
+             row["content_marker_ok"]=row["http_ok"] and (not marker or marker.casefold() in s.casefold())
+           except Exception as exc:
+            row["error"]=type(exc).__name__+(": "+str(exc))[:180]
+           rows.append(row)
+           print(name, row["http_status"],"ok",row["http_ok"],"marker",row["content_marker_ok"])
+          output={"checked_at":datetime.datetime.now(datetime.timezone.utc).isoformat(),"scope":"Solo disponibilidad de página HTTP y contenido básico; NO confirma emisión nueva, cifra, serie hidrológica ni pronóstico vigente","sources":rows}
+          pathlib.Path("data").mkdir(exist_ok=True)
+          pathlib.Path("data/spr-salud.json").write_text(json.dumps(output,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
+          PY
+      - name: Publicar resultado de verificación
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/spr-salud.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Actualiza verificación de accesibilidad SPR"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
