@@ -1,0 +1,44 @@
+name: Diagnosticar descargas INEGI
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/diagnostico-inegi.yml"
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Inspeccionar páginas de Red Hidrográfica INEGI
+        run: |
+          python - <<'PY'
+          import requests, re, html
+          urls = [
+            "https://www.inegi.org.mx/app/biblioteca/ficha.html?upc=702825006939",
+            "https://www.inegi.org.mx/app/biblioteca/ficha.html?upc=702825006943",
+            "https://www.inegi.org.mx/app/biblioteca/ficha.html?upc=889463130314",
+          ]
+          s=requests.Session()
+          s.headers.update({"User-Agent":"Mozilla/5.0"})
+          for url in urls:
+              print("\nPAGE",url)
+              r=s.get(url,timeout=30)
+              print("HTTP",r.status_code,"LEN",len(r.text),"FINAL",r.url)
+              text=html.unescape(r.text)
+              for pat in [r'https?://[^"\'<> ]+', r'[^"\'<> ]+\.zip[^"\'<> ]*', r'[^"\'<> ]+(?:descarga|download)[^"\'<> ]*']:
+                  vals=[]
+                  for m in re.findall(pat,text,re.I):
+                      if m not in vals: vals.append(m)
+                  for v in vals[:60]:
+                      print("LINK",v[:500])
+              print("SCRIPTS")
+              for src in re.findall(r'<script[^>]+src=["\']([^"\']+)',text,re.I)[:80]:
+                  print("SCRIPT",src)
+              for keyword in ["702825006939","889463130314","RH30Aa","descarga","download","urlArchivo","archivo"]:
+                  pos=text.lower().find(keyword.lower())
+                  if pos>=0:
+                      print("SNIP",keyword,text[max(0,pos-400):pos+900].replace("\n"," ")[:1400])
+          PY
