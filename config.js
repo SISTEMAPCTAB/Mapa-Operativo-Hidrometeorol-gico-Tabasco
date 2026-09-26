@@ -7,7 +7,8 @@ window.MAP_CONFIG={
     weatherExtra:"/Agente-Hidrometeorologico-Cloud/data/weatherlink/extra_latest.json",
     fuente1:"/Agente-Hidrometeorologico-Cloud/data/latest/FUENTE1.txt",
     insivumehRain:"/Agente-Hidrometeorologico-Cloud/data/fuentes_publicas/insivumeh_automaticas.json",
-    insivumehLevels:"/Agente-Hidrometeorologico-Cloud/data/fuentes_publicas/insivumeh_alto_hidro.json"
+    insivumehLevels:"/Agente-Hidrometeorologico-Cloud/data/fuentes_publicas/insivumeh_alto_hidro.json",
+    publicSources:"/Agente-Hidrometeorologico-Cloud/data/fuentes_publicas/latest.json"
   },
   rainThresholds:[
     {min:250,level:4,label:"Extraordinaria",color:"#6a2ca0"},
@@ -17,6 +18,15 @@ window.MAP_CONFIG={
     {min:0,level:0,label:"Menor a muy fuerte",color:"#9aa0a6"}
   ],
   rainDisplayMinMm:50,
+  forecastBasins:{
+    "Peñitas":{center:[17.43,-93.56],radius:52000},
+    "Malpaso":{center:[17.18,-93.60],radius:65000},
+    "Chicoasén":{center:[16.95,-93.18],radius:54000},
+    "La Angostura":{center:[16.40,-92.80],radius:76000},
+    "Bajo Grijalva-Ríos de la Sierra":{center:[17.55,-92.95],radius:70000},
+    "Usumacinta":{center:[17.35,-91.45],radius:90000},
+    "Presa Juan Sabines":{center:[16.32,-93.30],radius:56000}
+  },
   // Ubicaciones de referencia para el piloto. Se reemplazarán por coordenadas oficiales.
   stations:{
     "Samaria":[18.05,-93.19],"González":[18.03,-92.99],"Oxolotán":[17.38,-92.75],
