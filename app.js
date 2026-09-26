@@ -21,7 +21,7 @@ function rainClass(mm){
 }
 function levelDot(level){
   const c=level<0?"gray":LEVEL_COLORS[Math.min(3,level)];
-  return L.divIcon({className:"",html:`<div class="marker-dot s-${c}"></div>`,iconSize:[18,18],iconAnchor:[9,9]});
+  return L.divIcon({className:"",html:`<div class="level-triangle s-${c}"></div>`,iconSize:[24,22],iconAnchor:[12,11]});
 }
 function rainDot(k){
   return L.divIcon({className:"",html:`<div class="rain-dot" style="background:${k.color}"></div>`,iconSize:[20,20],iconAnchor:[10,15]});
@@ -126,6 +126,36 @@ async function load(){
    maxLevel=Math.max(maxLevel,ls.level);maxCombined=Math.max(maxCombined,cs.level);
    L.marker(p,{icon:levelDot(cs.level),title:r.estacion}).bindPopup(popupLevel(r,off.get(norm(r.estacion)),cs,near)).addTo(levelLayer);
    if(cs.level>=1)alerts.push({type:"Río",name:r.estacion,status:LEVEL_LABELS[cs.level],detail:cs.reasons.join(" · "),priority:5+cs.level});
+ }
+
+ // Niveles INSIVUMEH observados: visibles en la capa Aguas arriba.
+ // La ubicación es referencial cuando la fuente sólo publica municipio/localidad.
+ const usedGt={};
+ for(const r of insLevels?.estaciones||[]){
+   if(r.estado_dato!=="observado"||!finite(r.nivel_instantaneo_m))continue;
+   let p=coord(r.estacion);
+   if(!p)continue;
+   const key=p.join(",");
+   const n=usedGt[key]||0; usedGt[key]=n+1;
+   if(n>0)p=[p[0]+0.015*n,p[1]+0.012*n];
+   const maxRef=finite(r.nivel_referencia_max_m)?Number(r.nivel_referencia_max_m):null;
+   const current=Number(r.nivel_instantaneo_m);
+   let sev=0,reason="nivel observado INSIVUMEH";
+   if(maxRef!==null){
+     const ratio=current/maxRef;
+     if(ratio>=1){sev=2;reason="sobre referencia máxima estadística"}
+     else if(ratio>=0.90){sev=1;reason="cerca de referencia máxima estadística"}
+   }
+   const html=`<div class="popup-title">${esc(r.estacion)} · INSIVUMEH</div><div class="popup-grid">
+     <b>Río</b><span>${esc(r.rio||"s/d")}</span>
+     <b>Ubicación</b><span>${esc(r.ubicacion||"Guatemala")}</span>
+     <b>Nivel</b><span>${fmt(r.nivel_instantaneo_m,2)} m</span>
+     <b>Referencia máx.</b><span>${maxRef===null?"s/d":fmt(maxRef,2)+" m"}</span>
+     <b>Caudal</b><span>${finite(r.caudal_instantaneo_m3s)?fmt(r.caudal_instantaneo_m3s,2)+" m³/s":"s/d"}</span>
+     <b>Dato</b><span>${esc(r.ultima_observacion_fuente||"s/d")}</span>
+     <b>Nota</b><span>Ubicación geográfica referencial; la referencia máxima no equivale a umbral de inundación.</span>
+   </div>`;
+   L.marker(p,{icon:levelDot(sev),title:r.estacion+" · INSIVUMEH"}).bindPopup(html).addTo(upstreamLayer);
  }
  // Guatemala: conservar en el cuadro inferior todas las estaciones INSIVUMEH que sí reportan lluvia o nivel.
  alerts.push(...insRainRows(insRain),...insLevelRows(insLevels));
