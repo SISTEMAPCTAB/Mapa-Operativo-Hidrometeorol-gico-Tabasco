@@ -1,11 +1,65 @@
 {
-  "version": "2026-09-26",
-  "fuente_base": "INEGI Red Hidrográfica / Carta Hidrológica de Aguas Superficiales RH30",
-  "criterio": "Las zonas SMN se representarán mediante unión de subcuencas RH30. No se dibuja una zona completa hasta contar con geometrías oficiales de todos sus códigos confirmados.",
+  "version": "2026-09-26-v2",
+  "fuente_base": "CONAGUA SIGA / INEGI Carta Hidrológica de Aguas Superficiales 1:250 000, capa Cuencas 250 000 (campo SUBCUE)",
+  "criterio": "Agrupación operativa aproximada de subcuencas RH30 para representar las siete zonas del producto SMN 96 h. No equivale a una delimitación oficial publicada por SMN.",
   "zonas": {
+    "Peñitas": {
+      "status": "operativo",
+      "subcuencas": [
+        {
+          "codigo": "RH30Dc",
+          "nombre": "R. Mezcalapa"
+        }
+      ]
+    },
+    "Malpaso": {
+      "status": "operativo",
+      "subcuencas": [
+        {
+          "codigo": "RH30Ea",
+          "nombre": "P. Netzahualcóyotl"
+        }
+      ]
+    },
+    "Chicoasén": {
+      "status": "operativo",
+      "subcuencas": [
+        {
+          "codigo": "RH30Ed",
+          "nombre": "R. Chicoasén"
+        },
+        {
+          "codigo": "RH30Eb",
+          "nombre": "R. Alto Grijalva"
+        }
+      ]
+    },
+    "La Angostura": {
+      "status": "operativo",
+      "subcuencas": [
+        {
+          "codigo": "RH30Fa",
+          "nombre": "P. La Angostura"
+        }
+      ]
+    },
+    "Presa Juan Sabines": {
+      "status": "operativo_aproximado",
+      "subcuencas": [
+        {
+          "codigo": "RH30Fg",
+          "nombre": "R. La Concordia"
+        }
+      ],
+      "nota": "Se usa La Concordia como referencia operativa para el sistema Custepeques/Juan Sabines."
+    },
     "Bajo Grijalva-Ríos de la Sierra": {
-      "status": "confirmado_parcial",
-      "subcuencas_confirmadas": [
+      "status": "operativo",
+      "subcuencas": [
+        {
+          "codigo": "RH30Da",
+          "nombre": "R. Grijalva"
+        },
         {
           "codigo": "RH30Dh",
           "nombre": "R. Pichucalco"
@@ -17,6 +71,10 @@
         {
           "codigo": "RH30Dj",
           "nombre": "R. Tacotalpa"
+        },
+        {
+          "codigo": "RH30Dk",
+          "nombre": "R. Almendro"
         },
         {
           "codigo": "RH30Dn",
@@ -45,8 +103,8 @@
       ]
     },
     "Usumacinta": {
-      "status": "confirmado_parcial",
-      "subcuencas_confirmadas": [
+      "status": "operativo",
+      "subcuencas": [
         {
           "codigo": "RH30Aa",
           "nombre": "R. Usumacinta"
@@ -64,53 +122,23 @@
           "nombre": "R. Chacaljá"
         },
         {
-          "codigo": "RH30Ba",
-          "nombre": "R. Chixoy"
-        },
-        {
           "codigo": "RH30Ga",
           "nombre": "R. Lacantún"
-        }
-      ]
-    },
-    "Chicoasén": {
-      "status": "confirmado",
-      "subcuencas_confirmadas": [
+        },
         {
-          "codigo": "RH30Ed",
-          "nombre": "R. Chicoasén"
-        }
-      ]
-    },
-    "Malpaso": {
-      "status": "confirmado_nucleo",
-      "subcuencas_confirmadas": [
+          "codigo": "RH30Gb",
+          "nombre": "R. Ixcán"
+        },
         {
-          "codigo": "RH30Ea",
-          "nombre": "P. Netzahualcóyotl"
+          "codigo": "RH30Gc",
+          "nombre": "R. Chajul"
+        },
+        {
+          "codigo": "RH30Gd",
+          "nombre": "R. Lacanjá"
         }
       ],
-      "nota": "Se incorporarán tributarias adicionales sólo al confirmar su correspondencia operativa con la zona SMN Malpaso."
-    },
-    "La Angostura": {
-      "status": "confirmado_nucleo",
-      "subcuencas_confirmadas": [
-        {
-          "codigo": "RH30Fa",
-          "nombre": "P. La Angostura"
-        }
-      ],
-      "nota": "Se incorporarán tributarias adicionales sólo al confirmar su correspondencia operativa con la zona SMN La Angostura."
-    },
-    "Peñitas": {
-      "status": "pendiente_equivalencia",
-      "subcuencas_confirmadas": [],
-      "nota": "No se asignará un polígono hasta confirmar qué subcuencas RH30 usa la zona operativa SMN Peñitas."
-    },
-    "Presa Juan Sabines": {
-      "status": "pendiente_equivalencia",
-      "subcuencas_confirmadas": [],
-      "nota": "No se asignará un polígono hasta confirmar la equivalencia exacta con subcuencas RH30."
+      "nota": "La parte guatemalteca se sigue representando con estaciones INSIVUMEH; la capa RH30 sólo cubre territorio mexicano."
     }
   }
 }
