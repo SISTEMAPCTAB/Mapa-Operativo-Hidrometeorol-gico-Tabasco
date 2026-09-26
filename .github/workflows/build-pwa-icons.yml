@@ -1,0 +1,35 @@
+name: Generar iconos PWA
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "icons/icon.svg"
+      - ".github/workflows/build-pwa-icons.yml"
+permissions:
+  contents: write
+concurrency:
+  group: mapa-pwa-icons
+  cancel-in-progress: true
+jobs:
+  icons:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Convertir imagen vectorial a PNG
+        run: |
+          python -m pip install --quiet cairosvg
+          python - <<'PY'
+          import cairosvg, os
+          os.makedirs("icons",exist_ok=True)
+          for size in (180,192,512):
+              cairosvg.svg2png(url="icons/icon.svg",write_to=f"icons/icon-{size}.png",output_width=size,output_height=size)
+          cairosvg.svg2png(url="icons/icon.svg",write_to="icons/icon-maskable-512.png",output_width=512,output_height=512)
+          PY
+      - name: Publicar iconos
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add icons/*.png
+          git diff --cached --quiet || git commit -m "Publica iconos PNG de PWA"
+          git push
