@@ -1,0 +1,87 @@
+{
+  "version": "1.0",
+  "fuente": "CONAGUA - Sistema de Pronóstico en Ríos",
+  "url": "https://app.conagua.gob.mx/spr/bajogrijalva.html",
+  "precipitacion_cuenca": "https://app.conagua.gob.mx/spr/pronosticogasir.html",
+  "estado": "Consulta oficial enlazada; extracción numérica automática no validada",
+  "puntos": [
+    {
+      "nombre": "Tapijulapa",
+      "pronostico": null,
+      "emision": null,
+      "estado": "Consulta en portal oficial; sin dato estructurado verificado"
+    },
+    {
+      "nombre": "Samaria",
+      "pronostico": null,
+      "emision": null,
+      "estado": "Consulta en portal oficial; sin dato estructurado verificado"
+    },
+    {
+      "nombre": "González",
+      "pronostico": null,
+      "emision": null,
+      "estado": "Consulta en portal oficial; sin dato estructurado verificado"
+    },
+    {
+      "nombre": "San Joaquín",
+      "pronostico": null,
+      "emision": null,
+      "estado": "Consulta en portal oficial; sin dato estructurado verificado"
+    },
+    {
+      "nombre": "Gaviotas",
+      "pronostico": null,
+      "emision": null,
+      "estado": "Consulta en portal oficial; sin dato estructurado verificado"
+    },
+    {
+      "nombre": "Censo",
+      "pronostico": null,
+      "emision": null,
+      "estado": "Consulta en portal oficial; sin dato estructurado verificado"
+    },
+    {
+      "nombre": "Sabanilla",
+      "pronostico": null,
+      "emision": null,
+      "estado": "Consulta en portal oficial; sin dato estructurado verificado"
+    },
+    {
+      "nombre": "Porvenir",
+      "pronostico": null,
+      "emision": null,
+      "estado": "Consulta en portal oficial; sin dato estructurado verificado"
+    },
+    {
+      "nombre": "Platanar",
+      "pronostico": null,
+      "emision": null,
+      "estado": "Consulta en portal oficial; sin dato estructurado verificado"
+    },
+    {
+      "nombre": "Pueblo Nuevo",
+      "pronostico": null,
+      "emision": null,
+      "estado": "Consulta en portal oficial; sin dato estructurado verificado"
+    },
+    {
+      "nombre": "Puyacatengo",
+      "pronostico": null,
+      "emision": null,
+      "estado": "Consulta en portal oficial; sin dato estructurado verificado"
+    },
+    {
+      "nombre": "Teapa",
+      "pronostico": null,
+      "emision": null,
+      "estado": "Consulta en portal oficial; sin dato estructurado verificado"
+    },
+    {
+      "nombre": "Grijalva",
+      "pronostico": null,
+      "emision": null,
+      "estado": "Consulta en portal oficial; sin dato estructurado verificado"
+    }
+  ]
+}
