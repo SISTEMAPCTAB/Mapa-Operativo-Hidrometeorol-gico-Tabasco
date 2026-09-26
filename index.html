@@ -56,6 +56,7 @@
       <label><input type="checkbox" id="showLevels" checked> Niveles</label>
       <label><input type="checkbox" id="showRain" checked> Lluvia</label>
       <label><input type="checkbox" id="showUpstream" checked> Aguas arriba</label>
+      <label><input type="checkbox" id="showTonala" checked> Coatzacoalcos–Tonalá</label>
       <label class="forecast-control">Pronóstico SMN
         <select id="forecastWindow" aria-label="Ventana de pronóstico SMN">
           <option value="off">Oculto</option>
@@ -67,6 +68,8 @@
       </label>
     </section>
 
+    <div class="update-note" id="tonalaMapNotice" role="status">Coatzacoalcos–Tonalá: consultando último informe oficial…</div>
+
     <div class="map-wrap">
       <div id="map" role="application" aria-label="Mapa operativo"></div>
       <aside id="forecastSummary" class="forecast-summary" aria-label="Resumen del pronóstico SMN"></aside>
@@ -75,6 +78,7 @@
         <div class="map-overlay-row"><span class="legend-circle"></span><span><b>Círculo/gota</b> = lluvia</span></div>
         <div class="map-overlay-row"><span class="legend-triangle"></span><span><b>Triángulo</b> = nivel de río</span></div>
         <div class="map-overlay-row"><span class="legend-upstream">GT/CH</span><span><b>Aguas arriba</b> = Chiapas/Guatemala</span></div>
+        <div class="map-overlay-row"><span style="display:inline-block;width:13px;height:13px;border-radius:50%;background:#7b8086;border:2px solid white;box-shadow:0 0 0 1px #777" aria-hidden="true"></span><span><b>Tonalá</b> = punto de referencia; gris = lectura anterior</span></div>
       </aside>
     </div>
 
@@ -88,13 +92,13 @@
   </main>
 
   <script src="config.js?v=29"></script>
-  <script src="tonala-operativo.js?v=1" defer></script>
+  <script src="tonala-operativo.js?v=2" defer></script>
   <script>
   (function(){
     const status=document.getElementById('statusText');
     function loadApp(){
       const s=document.createElement('script');
-      s.src='app.js?v=31';
+      s.src='app.js?v=33';
       s.onerror=()=>{status.textContent='No fue posible cargar la aplicación del mapa.'};
       document.body.appendChild(s);
     }
