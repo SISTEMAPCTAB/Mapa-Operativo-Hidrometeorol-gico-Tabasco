@@ -9,6 +9,12 @@ map.getPane("forecastPane").style.zIndex=450;
 map.getPane("forecastPane").style.pointerEvents="auto";
 const levelLayer=L.layerGroup().addTo(map),rainLayer=L.layerGroup().addTo(map),upstreamLayer=L.layerGroup().addTo(map),forecastLayer=L.layerGroup().addTo(map);
 let latestForecastData=null;
+const sprLayer=L.layerGroup();
+const sprCatalogUrl="data/spr-bajo-grijalva.json";
+const sprOfficialUrl="https://app.conagua.gob.mx/spr/bajogrijalva.html";
+const sprPrecipUrl="https://app.conagua.gob.mx/spr/pronosticogasir.html";
+const sprNames=["Tapijulapa","Samaria","González","San Joaquín","Gaviotas","Censo","Sabanilla","Porvenir","Platanar","Pueblo Nuevo","Puyacatengo","Teapa","Grijalva"];
+
 
 
 
@@ -223,6 +229,33 @@ function insRainRows(doc){
  });
 }
 
+function renderSprDirectory(){
+ const host=document.getElementById("sprDirectory");
+ if(!host)return;
+ host.innerHTML=sprNames.map(name=>{
+   const p=coord(name);
+   const loc=p?"Referencia cartográfica; validar coordenadas oficiales":"Ubicación no verificada; sin marcador";
+   return `<tr><td><b>${esc(name)}</b></td><td>${esc(loc)}</td><td>Sin extracción numérica validada</td><td><a href="${sprOfficialUrl}" target="_blank" rel="noopener noreferrer">Consultar CONAGUA ↗</a></td></tr>`;
+ }).join("");
+ const status=document.getElementById("sprStatus");
+ if(status)status.textContent="Consulta independiente · 13 puntos oficiales · sin pronóstico numérico automatizado verificado. Verifique fecha de emisión en CONAGUA.";
+}
+function renderSprMarkers(){
+ sprLayer.clearLayers();
+ sprNames.forEach(name=>{
+  const p=coord(name);
+  if(!p)return;
+  const label=`<div class="popup-title">${esc(name)} · SPR CONAGUA</div><div class="spr-popup">
+   <p>Referencia cartográfica de la estación. No representa un pronóstico numérico vigente ni altera el semáforo operativo.</p>
+   <p><b>Fecha de emisión:</b> por verificar en fuente oficial.</p>
+   <a href="${sprOfficialUrl}" target="_blank" rel="noopener noreferrer">Consultar el pronóstico oficial ↗</a></div>`;
+  L.circleMarker(p,{radius:8,color:"#532c81",weight:2,fillColor:"#fff",fillOpacity:1})
+   .bindPopup(label).addTo(sprLayer);
+ });
+}
+renderSprDirectory();
+renderSprMarkers();
+document.getElementById("showSpr").addEventListener("change",e=>e.target.checked?sprLayer.addTo(map):map.removeLayer(sprLayer));
 async function load(){
  document.getElementById("statusText").textContent="Actualizando…";
  const [levels,rainCon,weather,extra,f1,insRain,insLevels,publicSources,mapping,geojson]=await Promise.all([
