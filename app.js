@@ -73,6 +73,19 @@ function geojsonZoneLayer(name,color){
   });
 }
 
+function forecastIssueMeta(doc){
+ const raw=String(doc?.fecha||"").trim(),time=String(doc?.emision||"").trim();
+ const months={enero:1,febrero:2,marzo:3,abril:4,mayo:5,junio:6,julio:7,agosto:8,septiembre:9,setiembre:9,octubre:10,noviembre:11,diciembre:12};
+ const match=raw.toLowerCase().match(/(\\d{1,2})\\s+de\\s+([a-záéíóú]+)\\s+del?\\s+(\\d{4})/i);
+ let key="";
+ if(match&&months[match[2]])key=match[3]+"-"+String(months[match[2]]).padStart(2,"0")+"-"+match[1].padStart(2,"0");
+ const local=new Intl.DateTimeFormat("en-US",{timeZone:"America/Mexico_City",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());
+ const part=t=>local.find(x=>x.type===t)?.value||"";
+ const today=part("year")+"-"+part("month")+"-"+part("day");
+ const state=key?(key===today?"ACTUALIZADO HOY":key<today?"DATO ANTERIOR":"FECHA FUTURA · VERIFICAR"):"FECHA NO VERIFICADA";
+ const label="SMN · Aviso "+(doc?.aviso||"s/d")+" · Emisión: "+(raw||"sin fecha")+(time?" · "+time:"")+" · "+state;
+ return{label,state,url:doc?.url||"https://smn.conagua.gob.mx/es/pronosticos/pronosticossubmenu/pronostico-meteorologico-especial-cuencas-96h"};
+}
 async function renderForecast(){
   const seq=++forecastRenderSeq;
   forecastLayer.clearLayers();
@@ -82,6 +95,7 @@ async function renderForecast(){
   if(win==="off"||!latestForecastData){if(box)box.innerHTML="";return}
 
   const src=latestForecastData?.smn96?.ventanas?.[win]||{};
+  const issue=forecastIssueMeta(latestForecastData?.smn96);
   const summary=[];
 
   for(const [name,val] of Object.entries(src)){
@@ -103,7 +117,7 @@ async function renderForecast(){
         <b>Subcuencas RH30</b><span>${esc(codes.join(", ")||"s/d")}</span>
         <b>Cuencas</b><span>${esc(names.join(", ")||"s/d")}</span>
         <b>Fuente cartográfica</b><span>INEGI Red Hidrográfica 1:50 000, edición 2.0</span>
-        <b>Emisión</b><span>${esc(latestForecastData?.smn96?.emision||"s/d")}</span>
+        <b>Emisión</b><span>${esc(issue.label)}</span>
         <b>Nota</b><span>Agrupación operativa aproximada de subcuencas oficiales para representar la zona SMN; no es una delimitación oficial publicada por SMN.</span>
       </div>`);
       layer.bindTooltip(`${esc(name)} · ${forecastLabel(min,max)}`,{
@@ -128,10 +142,11 @@ async function renderForecast(){
   }
 
   if(box){
+    const header=`<div class="forecast-summary-title">Pronóstico SMN · ${esc(win)} h</div><div class="forecast-issue"><b>${esc(issue.label)}</b> · <a href="${esc(issue.url)}" target="_blank" rel="noopener noreferrer">Fuente oficial ↗</a></div>`;
     box.innerHTML=summary.length
-      ? `<div class="forecast-summary-title">Pronóstico SMN · ${esc(win)} h</div>`+
+      ? header+
         summary.map(x=>`<div class="forecast-summary-row"><span class="forecast-swatch" style="background:${x.color}"></span><span><b>${esc(x.name)}</b> · ${forecastLabel(x.min,x.max)} <small>· ${esc(x.detail)}</small></span></div>`).join("")
-      : `<div class="forecast-summary-title">Pronóstico SMN · ${esc(win)} h</div><div class="forecast-summary-empty">Sin rangos ≥50 mm en esta ventana.</div>`;
+      : header+`<div class="forecast-summary-empty">Sin rangos ≥50 mm en esta ventana.</div>`;
   }
 
   const s=document.getElementById("statusText");
