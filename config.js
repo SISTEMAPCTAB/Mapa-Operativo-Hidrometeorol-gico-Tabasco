@@ -32,10 +32,10 @@ window.MAP_CONFIG={
     "CHAPULTENANGO PCIVILCHIAPAS":[17.33,-93.13],"SALTO DE AGUA PCIVILCHIAPAS":[17.56,-92.33],
     "PALENQUE PCIVILCHIAPAS":[17.51,-91.98],"NAISA 1":[16.52,-90.19],
     "LAS CRUCES 2 (PETEN)":[16.65,-90.18],"SAN FRANCISCO":[16.80,-89.94],
-    "El Tigre":[16.65922,-90.29140],"El Porvenir":[16.65922,-90.29140],
-    "Machaquilá":[16.3569,-89.5891],"San Pedro Mactún":[16.9729,-89.9147],
-    "San Agustín Chixoy":[16.069835,-90.425616],"Playa Grande":[15.9000,-90.7000],
-    "Playa Grande Met (Ixcan)":[15.9000,-90.7000],"Santa María Cahabón":[15.6056,-89.8125],
+    "El Tigre":[16.611410,-90.655150],"El Porvenir":[16.519581,-90.483911],
+    "Machaquilá":[16.393860,-89.444400],"San Pedro Mactún":[16.9729,-89.9147],
+    "San Agustín Chixoy":[16.069835,-90.425616],"Playa Grande":[15.968061,-90.746611],
+    "Playa Grande Met (Ixcan)":[15.968061,-90.746611],"Santa María Cahabón":[15.6056,-89.8125],
     "Panzos PHC Altaverapaz":[15.3974,-89.64397]
   }
 };
