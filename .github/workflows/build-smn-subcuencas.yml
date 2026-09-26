@@ -1,0 +1,95 @@
+name: Construir subcuencas SMN
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "20 16 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Descargar subcuencas RH30 desde CONAGUA
+        run: |
+          python - <<'PY'
+          import json, os, time, requests
+
+          service = "https://sigagis.conagua.gob.mx/ArcGIS/rest/services/LocREPDA/MapServer/18/query"
+          mapping = json.load(open("data/pronostico-smn-subcuencas.json", encoding="utf-8"))
+
+          wanted = {}
+          for zone, cfg in mapping["zonas"].items():
+              for sb in cfg.get("subcuencas", []):
+                  wanted.setdefault(sb["codigo"], {"nombre": sb.get("nombre", sb["codigo"]), "zonas": []})
+                  wanted[sb["codigo"]]["zonas"].append(zone)
+
+          features = []
+          session = requests.Session()
+          session.headers.update({"User-Agent":"Mozilla/5.0 MapaOperativoIPCET/1.0"})
+
+          for code, meta in wanted.items():
+              params = {
+                  "where": f"SUBCUE='{code}'",
+                  "outFields": "FID,CLAVE,RH,CVE_CUEN,CUENCA,SUBCUE,SUBCUENCA,KM2",
+                  "returnGeometry": "true",
+                  "outSR": "4326",
+                  "f": "geojson"
+              }
+              r = session.get(service, params=params, timeout=60)
+              if r.ok:
+                  try:
+                      data = r.json()
+                  except Exception:
+                      data = {}
+              else:
+                  data = {}
+
+              fs = data.get("features") or []
+              if not fs:
+                  # Fallback Esri JSON
+                  params["f"] = "json"
+                  r = session.get(service, params=params, timeout=60)
+                  data = r.json() if r.ok else {}
+                  for ft in data.get("features") or []:
+                      rings = (ft.get("geometry") or {}).get("rings") or []
+                      if not rings:
+                          continue
+                      props = ft.get("attributes") or {}
+                      features.append({
+                          "type":"Feature",
+                          "properties": {**props, "zonas_smn": meta["zonas"]},
+                          "geometry":{"type":"Polygon","coordinates":rings}
+                      })
+              else:
+                  for ft in fs:
+                      ft.setdefault("properties", {})["zonas_smn"] = meta["zonas"]
+                      features.append(ft)
+              time.sleep(0.25)
+
+          out = {
+              "type":"FeatureCollection",
+              "source":"CONAGUA SIGA / INEGI Cuencas 250 000",
+              "generated_utc":__import__("datetime").datetime.utcnow().isoformat()+"Z",
+              "features":features
+          }
+          os.makedirs("data", exist_ok=True)
+          with open("data/subcuencas-smn.geojson","w",encoding="utf-8") as f:
+              json.dump(out,f,ensure_ascii=False,separators=(",",":"))
+
+          print("Features descargadas:", len(features))
+          if not features:
+              raise SystemExit("No se pudo descargar ninguna subcuenca; no se reemplaza el archivo local.")
+          PY
+
+      - name: Guardar GeoJSON actualizado
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/subcuencas-smn.geojson
+          git diff --cached --quiet || git commit -m "Actualiza geometrías locales de subcuencas SMN"
+          git push
