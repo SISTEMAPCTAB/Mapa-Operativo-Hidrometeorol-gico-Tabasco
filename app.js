@@ -47,6 +47,7 @@ function forecastLabel(min,max){
 }
 let forecastMapping=null;
 let forecastGeojson=null;
+let forecastRenderSeq=0;
 
 function zoneFeatures(name){
   const fs=forecastGeojson?.features||[];
@@ -97,7 +98,7 @@ async function renderForecast(){
         <b>Pronóstico</b><span>${forecastLabel(min,max)}</span>
         <b>Subcuencas RH30</b><span>${esc(codes.join(", ")||"s/d")}</span>
         <b>Cuencas</b><span>${esc(names.join(", ")||"s/d")}</span>
-        <b>Fuente cartográfica</b><span>CONAGUA SIGA / INEGI 1:250 000</span>
+        <b>Fuente cartográfica</b><span>INEGI Red Hidrográfica 1:50 000, edición 2.0</span>
         <b>Emisión</b><span>${esc(latestForecastData?.smn96?.emision||"s/d")}</span>
         <b>Nota</b><span>Agrupación operativa aproximada de subcuencas oficiales para representar la zona SMN; no es una delimitación oficial publicada por SMN.</span>
       </div>`);
