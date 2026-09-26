@@ -1,0 +1,33 @@
+name: Validar JavaScript y controles
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "app.js"
+      - "config.js"
+      - "index.html"
+      - ".github/workflows/validar-mapa.yml"
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Comprobar sintaxis y estructura sin tocar datos
+        run: |
+          node --check app.js
+          node --check config.js
+          python - <<'PY'
+          from html.parser import HTMLParser
+          from collections import Counter
+          class IDs(HTMLParser):
+              def __init__(self): super().__init__();self.ids=[]
+              def handle_starttag(self,tag,attrs):
+                  self.ids += [v for k,v in attrs if k=="id"]
+          p=IDs();p.feed(open("index.html",encoding="utf-8").read())
+          repeated=[k for k,v in Counter(p.ids).items() if v>1]
+          assert not repeated, "IDs duplicados: "+str(repeated)
+          for key in ("showSPR","sprPanel","sprDirectory","sprHealth","forecastWindow","map"):
+              assert key in p.ids, "Falta control: "+key
+          print("OK: JS válido y controles únicos")
+          PY
