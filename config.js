@@ -18,15 +18,15 @@ window.MAP_CONFIG={
     {min:0,level:0,label:"Menor a muy fuerte",color:"#9aa0a6"}
   ],
   rainDisplayMinMm:50,
-  conaguaBasinsService:"https://sigagis.conagua.gob.mx/ArcGIS/rest/services/sigacua18/Cuencas/MapServer/0/query",
+  conaguaBasinsService:"https://sigagis.conagua.gob.mx/ArcGIS/rest/services/LocREPDA/MapServer/18/query",
   forecastBasins:{
-    "Peñitas":{center:[17.43,-93.56],radius:52000},
-    "Malpaso":{center:[17.18,-93.60],radius:65000},
-    "Chicoasén":{center:[16.95,-93.18],radius:54000},
-    "La Angostura":{center:[16.40,-92.80],radius:76000},
-    "Bajo Grijalva-Ríos de la Sierra":{center:[17.55,-92.95],radius:70000},
-    "Usumacinta":{center:[17.35,-91.45],radius:90000},
-    "Presa Juan Sabines":{center:[16.32,-93.30],radius:56000}
+    "Peñitas":{center:[17.444,-93.458]},
+    "Malpaso":{center:[17.184,-93.600]},
+    "Chicoasén":{center:[16.944,-93.096]},
+    "La Angostura":{center:[16.401,-92.778]},
+    "Bajo Grijalva-Ríos de la Sierra":{center:[17.565,-92.948]},
+    "Usumacinta":{center:[17.430,-91.490]},
+    "Presa Juan Sabines":{center:[16.270,-92.690]}
   },
   // Ubicaciones de referencia para el piloto. Se reemplazarán por coordenadas oficiales.
   stations:{
