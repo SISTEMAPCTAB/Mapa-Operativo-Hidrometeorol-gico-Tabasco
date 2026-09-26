@@ -30,3 +30,8 @@ main{max-width:1500px;margin:auto;padding:14px}.summary{display:grid;grid-templa
 .map-overlay-title{font-weight:800;color:var(--wine);margin-bottom:6px;font-size:.94rem}
 .map-overlay-row{display:flex;align-items:center;gap:8px;margin:5px 0}
 @media(max-width:760px){.map-overlay-legend{right:8px;bottom:8px;max-width:210px;font-size:.72rem;padding:8px 9px}.map-overlay-title{font-size:.82rem}}
+
+.forecast-control{display:flex;align-items:center;gap:8px}
+.forecast-control select{border:1px solid #d8d4cc;border-radius:10px;padding:7px 10px;background:#fff;font-weight:650}
+.forecast-basin-label{background:rgba(255,255,255,.92);border:1px solid rgba(90,90,90,.25);border-radius:8px;padding:3px 6px;font-size:.72rem;font-weight:800;color:#333;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.forecast-note{font-size:.78rem;color:#666;line-height:1.25}
