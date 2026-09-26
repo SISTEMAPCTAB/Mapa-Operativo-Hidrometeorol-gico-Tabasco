@@ -123,3 +123,6 @@ main{max-width:1500px;margin:auto;padding:14px}.summary{display:grid;grid-templa
   .topbar #refreshBtn{flex:none;margin-left:auto;padding:8px 12px;font-size:.85rem}
   #map .leaflet-control-attribution{font-size:9px;padding:2px 4px;background:rgba(255,255,255,.88)}
 }
+
+.update-note{background:#fff;border:1px solid var(--line);border-radius:12px;padding:9px 13px;margin:0 0 10px;color:#515151;font-size:.84rem;line-height:1.4}
+@media(max-width:600px){.update-note{font-size:.78rem}.leaflet-popup-content{max-height:55vh;overflow-y:auto}.popup-grid{grid-template-columns:minmax(90px,auto) minmax(0,1fr);overflow-wrap:anywhere}}
