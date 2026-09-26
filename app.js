@@ -232,7 +232,7 @@ function isChiapasOrGuatemala(r){
 }
 function insLevelRows(doc){
  return (doc?.estaciones||[]).filter(x=>x.estado_dato==="observado"&&finite(x.nivel_instantaneo_m)).map(x=>({
-   type:"INSIVUMEH nivel",name:x.estacion,river:x.rio||null,status:"Monitoreo",detail:`${fmt(x.nivel_instantaneo_m,2)} m · NAMO: s/d (sin referencia homologada) · ${esc(x.rio||"río s/d")} · ${esc(x.ubicacion||"Guatemala")}`,priority:1
+   type:"INSIVUMEH nivel",name:x.estacion,river:x.rio||null,status:"Monitoreo",detail:`${fmt(x.nivel_instantaneo_m,2)} m · Máximo de referencia estadística: ${fmt(x.nivel_referencia_max_m,2)} m${finite(x.nivel_referencia_max_m)?` · Diferencia: ${Number(x.nivel_instantaneo_m)>=Number(x.nivel_referencia_max_m)?"+":""}${fmt(Number(x.nivel_instantaneo_m)-Number(x.nivel_referencia_max_m),2)} m`:""} · ${esc(x.rio||"río s/d")} · ${esc(x.ubicacion||"Guatemala")} · No equivale a NAMO ni a umbral de inundación`,priority:1
  }));
 }
 function insRainRows(doc){
@@ -307,7 +307,7 @@ async function load(){
      <b>Río</b><span>${esc(r.rio||"s/d")}</span>
      <b>Ubicación</b><span>${esc(r.ubicacion||"Guatemala")}</span>
      <b>Nivel</b><span>${fmt(r.nivel_instantaneo_m,2)} m</span>
-     <b>Diferencia al NAMO</b><span>s/d · fuente sin NAMO homologado</span>
+     <b>Referencia</b><span>Máximo estadístico; no es NAMO ni umbral de inundación</span>
      <b>Referencia máx.</b><span>${maxRef===null?"s/d":fmt(maxRef,2)+" m"}</span>
      <b>Caudal</b><span>${finite(r.caudal_instantaneo_m3s)?fmt(r.caudal_instantaneo_m3s,2)+" m³/s":"s/d"}</span>
      <b>Dato</b><span>${esc(r.ultima_observacion_fuente||"s/d")}</span>
