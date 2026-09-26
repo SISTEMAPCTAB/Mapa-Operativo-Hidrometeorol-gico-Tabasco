@@ -7,7 +7,7 @@
   <title>Mapa Operativo Hidrometeorológico · Tabasco</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="styles.css?v=7">
+  <link rel="stylesheet" href="styles.css?v=8">
 </head>
 <body>
   <header class="topbar">
@@ -47,6 +47,15 @@
       <label><input type="checkbox" id="showLevels" checked> Niveles</label>
       <label><input type="checkbox" id="showRain" checked> Lluvia</label>
       <label><input type="checkbox" id="showUpstream" checked> Aguas arriba</label>
+      <label class="forecast-control">Pronóstico SMN
+        <select id="forecastWindow" aria-label="Ventana de pronóstico SMN">
+          <option value="off">Oculto</option>
+          <option value="0-24">0–24 h</option>
+          <option value="24-48">24–48 h</option>
+          <option value="48-72">48–72 h</option>
+          <option value="72-96">72–96 h</option>
+        </select>
+      </label>
     </section>
 
     <div class="map-wrap">
@@ -66,13 +75,13 @@
     </section>
   </main>
 
-  <script src="config.js?v=7"></script>
+  <script src="config.js?v=8"></script>
   <script>
   (function(){
     const status=document.getElementById('statusText');
     function loadApp(){
       const s=document.createElement('script');
-      s.src='app.js?v=7';
+      s.src='app.js?v=8';
       s.onerror=()=>{status.textContent='No fue posible cargar la aplicación del mapa.'};
       document.body.appendChild(s);
     }
