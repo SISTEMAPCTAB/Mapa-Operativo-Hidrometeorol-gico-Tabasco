@@ -45,81 +45,27 @@ function forecastLabel(min,max){
   if(finite(min)&&finite(max))return `${Number(min).toFixed(0)}–${Number(max).toFixed(0)} mm`;
   return finite(min)?`≥${Number(min).toFixed(0)} mm`:`≤${Number(max).toFixed(0)} mm`;
 }
-const forecastGeomCache=new Map();
 let forecastMapping=null;
+let forecastGeojson=null;
 
-function arcgisJsonpService(url,params){
-  return new Promise((resolve,reject)=>{
-    const cb="__arcgis_"+Date.now()+"_"+Math.random().toString(36).slice(2);
-    const script=document.createElement("script");
-    const timer=setTimeout(()=>{cleanup();reject(new Error("timeout"));},12000);
-    function cleanup(){clearTimeout(timer);try{delete window[cb]}catch{}script.remove()}
-    window[cb]=(data)=>{cleanup();resolve(data)};
-    params.set("f","json");
-    params.set("callback",cb);
-    script.src=url+"?"+params.toString();
-    script.onerror=()=>{cleanup();reject(new Error("jsonp error"))};
-    document.head.appendChild(script);
-  });
+function zoneFeatures(name){
+  const fs=forecastGeojson?.features||[];
+  return fs.filter(ft=>Array.isArray(ft?.properties?.zonas_smn)&&ft.properties.zonas_smn.includes(name));
 }
 
-async function subbasinByCode(code){
-  if(forecastGeomCache.has(code))return forecastGeomCache.get(code);
-  const params=new URLSearchParams({
-    where:`SUBCUE='${code.replace(/'/g,"''")}'`,
-    outFields:"FID,CLAVE,RH,CVE_CUEN,CUENCA,SUBCUE,SUBCUENCA,KM2",
-    returnGeometry:"true",
-    outSR:"4326"
-  });
-
-  try{
-    const r=await fetch(C.conaguaSubbasinsService+"?"+params.toString()+"&f=json",{cache:"force-cache"});
-    if(r.ok){
-      const d=await r.json();
-      const ft=d?.features?.[0]||null;
-      if(ft){forecastGeomCache.set(code,ft);return ft}
-    }
-  }catch{}
-
-  try{
-    const d=await arcgisJsonpService(C.conaguaSubbasinsService,params);
-    const ft=d?.features?.[0]||null;
-    forecastGeomCache.set(code,ft);
-    return ft;
-  }catch(e){
-    console.warn("Subcuenca no disponible",code,e);
-    forecastGeomCache.set(code,null);
-    return null;
-  }
-}
-
-function esriFeatureLayer(feature,style){
-  const rings=feature?.geometry?.rings;
-  if(!Array.isArray(rings)||!rings.length)return null;
-  const latlngs=rings.map(ring=>ring.map(pt=>[Number(pt[1]),Number(pt[0])]));
-  return L.polygon(latlngs,{...style,pane:"forecastPane"});
-}
-
-async function zoneSubbasinLayers(name,color){
-  const z=forecastMapping?.zonas?.[name];
-  if(!z?.subcuencas?.length)return {layers:[],loaded:[],missing:[]};
-  const layers=[],loaded=[],missing=[];
-  for(const sb of z.subcuencas){
-    const ft=await subbasinByCode(sb.codigo);
-    if(!ft){missing.push(sb.codigo);continue}
-    const layer=esriFeatureLayer(ft,{
+function geojsonZoneLayer(name,color){
+  const fs=zoneFeatures(name);
+  if(!fs.length)return null;
+  return L.geoJSON({type:"FeatureCollection",features:fs},{
+    pane:"forecastPane",
+    style:{
       color,
-      weight:1.7,
+      weight:1.8,
       fillColor:color,
       fillOpacity:.18,
-      opacity:.88
-    });
-    if(!layer){missing.push(sb.codigo);continue}
-    layers.push(layer);
-    const a=ft.attributes||{};
-    loaded.push({codigo:sb.codigo,nombre:a.SUBCUENCA||sb.nombre||sb.codigo});
-  }
-  return {layers,loaded,missing};
+      opacity:.90
+    }
+  });
 }
 
 async function renderForecast(){
@@ -141,24 +87,26 @@ async function renderForecast(){
     if(!Number.isFinite(max)||max<50)continue;
 
     const color=forecastColor(min,max);
-    const g=await zoneSubbasinLayers(name,color);
-    if(seq!==forecastRenderSeq)return;
+    const layer=geojsonZoneLayer(name,color);
 
-    if(g.layers.length){
-      const fg=L.featureGroup(g.layers);
-      const names=g.loaded.map(x=>x.nombre).join(", ");
-      fg.bindPopup(`<div class="popup-title">${esc(name)} · SMN</div><div class="popup-grid">
+    if(layer){
+      const codes=[...new Set((zoneFeatures(name)).map(ft=>ft?.properties?.SUBCUE).filter(Boolean))];
+      const names=[...new Set((zoneFeatures(name)).map(ft=>ft?.properties?.SUBCUENCA).filter(Boolean))];
+      layer.bindPopup(`<div class="popup-title">${esc(name)} · SMN</div><div class="popup-grid">
         <b>Ventana</b><span>${esc(win)} h</span>
         <b>Pronóstico</b><span>${forecastLabel(min,max)}</span>
-        <b>Subcuencas RH30</b><span>${esc(names||"s/d")}</span>
+        <b>Subcuencas RH30</b><span>${esc(codes.join(", ")||"s/d")}</span>
+        <b>Cuencas</b><span>${esc(names.join(", ")||"s/d")}</span>
         <b>Fuente cartográfica</b><span>CONAGUA SIGA / INEGI 1:250 000</span>
         <b>Emisión</b><span>${esc(latestForecastData?.smn96?.emision||"s/d")}</span>
-        <b>Nota</b><span>Agrupación operativa aproximada para representar la zona SMN. No es una delimitación oficial publicada por SMN.</span>
+        <b>Nota</b><span>Agrupación operativa aproximada de subcuencas oficiales para representar la zona SMN; no es una delimitación oficial publicada por SMN.</span>
       </div>`);
-      fg.bindTooltip(`${esc(name)} · ${forecastLabel(min,max)}`,{sticky:true,direction:"top",className:"forecast-tooltip",opacity:.96});
-      fg.addTo(forecastLayer);
+      layer.bindTooltip(`${esc(name)} · ${forecastLabel(min,max)}`,{
+        sticky:true,direction:"top",className:"forecast-tooltip",opacity:.96
+      });
+      layer.addTo(forecastLayer);
       rendered++;
-      summary.push({name,min,max,color,detail:g.loaded.length+" subcuenca(s) RH30"});
+      summary.push({name,min,max,color,detail:codes.length+" subcuenca(s)"});
     }else{
       const marker=L.marker(cfg.center,{
         title:name,
@@ -166,7 +114,7 @@ async function renderForecast(){
       }).bindPopup(`<div class="popup-title">${esc(name)} · SMN</div><div class="popup-grid">
         <b>Ventana</b><span>${esc(win)} h</span>
         <b>Pronóstico</b><span>${forecastLabel(min,max)}</span>
-        <b>Cartografía</b><span>Subcuenca RH30 no disponible en esta consulta; se conserva el punto operativo.</span>
+        <b>Cartografía</b><span>GeoJSON local de subcuencas aún no disponible; se conserva el punto operativo.</span>
       </div>`);
       marker.addTo(forecastLayer);
       rendered++;
@@ -259,12 +207,13 @@ function insRainRows(doc){
 
 async function load(){
  document.getElementById("statusText").textContent="Actualizando…";
- const [levels,rainCon,weather,extra,f1,insRain,insLevels,publicSources,mapping]=await Promise.all([
+ const [levels,rainCon,weather,extra,f1,insRain,insLevels,publicSources,mapping,geojson]=await Promise.all([
    fetchJSON(C.urls.levels),fetchJSON(C.urls.rainConagua),fetchJSON(C.urls.weather),fetchJSON(C.urls.weatherExtra),
-   fetchText(C.urls.fuente1),fetchJSON(C.urls.insivumehRain),fetchJSON(C.urls.insivumehLevels),fetchJSON(C.urls.publicSources),fetchJSON(C.urls.forecastMapping)
+   fetchText(C.urls.fuente1),fetchJSON(C.urls.insivumehRain),fetchJSON(C.urls.insivumehLevels),fetchJSON(C.urls.publicSources),fetchJSON(C.urls.forecastMapping),fetchJSON(C.urls.forecastGeojson)
  ]);
  latestForecastData=publicSources;
  forecastMapping=mapping;
+ forecastGeojson=geojson;
  const off=parseOfficial(f1),rains=[];
  for(const r of Array.isArray(rainCon)?rainCon:[]){
    if(finite(r.lluvia_hoy_desde_08_mm))rains.push({name:r.estacion,source:"CONAGUA",mm:+r.lluvia_hoy_desde_08_mm,time:r.fecha_hora,period:"HOY desde 08:00",location:"Tabasco/Chiapas"});
