@@ -2,6 +2,11 @@ name: Construir subcuencas SMN
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/build-smn-subcuencas.yml"
+      - "data/pronostico-smn-subcuencas.json"
   schedule:
     - cron: "20 16 * * *"
 
