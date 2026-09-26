@@ -7,7 +7,7 @@
   <title>Mapa Operativo Hidrometeorológico · Tabasco</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="styles.css?v=14">
+  <link rel="stylesheet" href="styles.css?v=15">
 </head>
 <body>
   <header class="topbar">
@@ -60,6 +60,7 @@
 
     <div class="map-wrap">
       <div id="map" role="application" aria-label="Mapa operativo"></div>
+      <aside id="forecastSummary" class="forecast-summary" aria-label="Resumen del pronóstico SMN"></aside>
       <aside class="map-overlay-legend" aria-label="Simbología del mapa">
         <div class="map-overlay-title">Simbología</div>
         <div class="map-overlay-row"><span class="legend-circle"></span><span><b>Círculo/gota</b> = lluvia</span></div>
@@ -75,13 +76,13 @@
     </section>
   </main>
 
-  <script src="config.js?v=14"></script>
+  <script src="config.js?v=15"></script>
   <script>
   (function(){
     const status=document.getElementById('statusText');
     function loadApp(){
       const s=document.createElement('script');
-      s.src='app.js?v=14';
+      s.src='app.js?v=15';
       s.onerror=()=>{status.textContent='No fue posible cargar la aplicación del mapa.'};
       document.body.appendChild(s);
     }
