@@ -141,33 +141,24 @@ async function renderForecast(){
     if(!Number.isFinite(max)||max<50)continue;
 
     const color=forecastColor(min,max);
-    const group=await basinGroup(name,cfg,{color,weight:2.2,fillColor:color,fillOpacity:.18,opacity:.9});
-    if(seq!==forecastRenderSeq)return;
+    const marker=L.marker(cfg.center,{
+      title:name,
+      icon:L.divIcon({
+        className:"",
+        html:`<div class="forecast-diamond" style="background:${color}"></div>`,
+        iconSize:[20,20],
+        iconAnchor:[10,10]
+      })
+    }).bindPopup(`<div class="popup-title">${esc(name)} · SMN</div><div class="popup-grid">
+      <b>Ventana</b><span>${esc(win)} h</span>
+      <b>Pronóstico</b><span>${forecastLabel(min,max)}</span>
+      <b>Cartografía</b><span>Polígono temporalmente desactivado</span>
+      <b>Motivo</b><span>Se está sustituyendo por unión de subcuencas RH30 verificadas para evitar áreas desfasadas.</span>
+    </div>`);
 
-    if(group.layers.length){
-      const fg=L.featureGroup(group.layers);
-      const hydNames=group.names.length?group.names.join(", "):"cuencas hidrográficas oficiales";
-      fg.bindPopup(`<div class="popup-title">${esc(name)} · SMN</div><div class="popup-grid">
-        <b>Ventana</b><span>${esc(win)} h</span>
-        <b>Pronóstico</b><span>${forecastLabel(min,max)}</span>
-        <b>Base geográfica</b><span>${esc(hydNames)}</span>
-        <b>Fuente geométrica</b><span>INEGI–INE–CONAGUA, escala 1:250 000</span>
-        <b>Emisión</b><span>${esc(latestForecastData?.smn96?.emision||"s/d")}</span>
-        <b>Nota</b><span>Agrupación operativa aproximada de cuencas oficiales para representar la zona del producto SMN; no equivale a una delimitación oficial publicada por el SMN.</span>
-      </div>`);
-      fg.bindTooltip(`${esc(name)} · ${forecastLabel(min,max)}`,{sticky:true,direction:"top",className:"forecast-tooltip",opacity:.96});
-      fg.addTo(forecastLayer);
-      rendered++;
-    }else{
-      // Fallback: do not lose the forecast if a geometry endpoint fails.
-      const marker=L.marker(cfg.center,{
-        title:name,
-        icon:L.divIcon({className:"",html:`<div class="forecast-diamond" style="background:${color}"></div>`,iconSize:[20,20],iconAnchor:[10,10]})
-      }).bindPopup(`<div class="popup-title">${esc(name)} · SMN</div><div class="popup-grid"><b>Ventana</b><span>${esc(win)} h</span><b>Pronóstico</b><span>${forecastLabel(min,max)}</span><b>Geometría</b><span>No disponible; se muestra punto operativo.</span></div>`);
-      marker.addTo(forecastLayer);
-      rendered++;
-    }
+    marker.addTo(forecastLayer);
     summary.push({name,min,max,color});
+    rendered++;
   }
 
   if(box){
