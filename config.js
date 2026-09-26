@@ -8,7 +8,8 @@ window.MAP_CONFIG={
     fuente1:"/Agente-Hidrometeorologico-Cloud/data/latest/FUENTE1.txt",
     insivumehRain:"/Agente-Hidrometeorologico-Cloud/data/fuentes_publicas/insivumeh_automaticas.json",
     insivumehLevels:"/Agente-Hidrometeorologico-Cloud/data/fuentes_publicas/insivumeh_alto_hidro.json",
-    publicSources:"/Agente-Hidrometeorologico-Cloud/data/fuentes_publicas/latest.json"
+    publicSources:"/Agente-Hidrometeorologico-Cloud/data/fuentes_publicas/latest.json",
+    forecastMapping:"data/pronostico-smn-subcuencas.json"
   },
   rainThresholds:[
     {min:250,level:4,label:"Extraordinaria",color:"#6a2ca0"},
@@ -18,7 +19,7 @@ window.MAP_CONFIG={
     {min:0,level:0,label:"Menor a muy fuerte",color:"#9aa0a6"}
   ],
   rainDisplayMinMm:50,
-  conaguaBasinsService:"https://sigagis.conagua.gob.mx/ArcGIS/rest/services/Caracterizaci%C3%B3n/MapServer/9/query",
+  conaguaSubbasinsService:"https://sigagis.conagua.gob.mx/ArcGIS/rest/services/LocREPDA/MapServer/18/query",
   forecastBasins:{
     "Peñitas":{
       center:[17.444,-93.458],
