@@ -7,7 +7,7 @@ base.on("tileerror",()=>{const s=document.getElementById("statusText");if(s)s.te
 map.createPane("forecastPane");
 map.getPane("forecastPane").style.zIndex=450;
 map.getPane("forecastPane").style.pointerEvents="auto";
-const levelLayer=L.layerGroup().addTo(map),rainLayer=L.layerGroup().addTo(map),upstreamLayer=L.layerGroup().addTo(map),forecastLayer=L.layerGroup().addTo(map);
+const levelLayer=L.layerGroup().addTo(map),rainLayer=L.layerGroup().addTo(map),upstreamLayer=L.layerGroup().addTo(map),forecastLayer=L.layerGroup().addTo(map),sprLayer=L.layerGroup();
 let latestForecastData=null;
 const sprLayer=L.layerGroup();
 const sprCatalogUrl="data/spr-bajo-grijalva.json";
@@ -256,15 +256,39 @@ function renderSprMarkers(){
 renderSprDirectory();
 renderSprMarkers();
 document.getElementById("showSpr").addEventListener("change",e=>e.target.checked?sprLayer.addTo(map):map.removeLayer(sprLayer));
+let sprCatalog=null;
+function drawSPR(doc){
+ sprLayer.clearLayers();
+ const panel=document.getElementById("sprPanel");
+ const on=document.getElementById("showSPR")?.checked;
+ if(panel)panel.hidden=!on;
+ if(!on)return;
+ const list=Array.isArray(doc?.puntos)?doc.puntos:[];
+ const directory=document.getElementById("sprDirectory");
+ const status=document.getElementById("sprStatus");
+ const url=doc?.url||"https://app.conagua.gob.mx/spr/bajogrijalva.html";
+ const safeUrl=url==="https://app.conagua.gob.mx/spr/bajogrijalva.html"?url:"https://app.conagua.gob.mx/spr/bajogrijalva.html";
+ if(status)status.textContent=list.length+" puntos oficiales del Bajo Grijalva · pronóstico numérico automático aún no validado.";
+ if(directory)directory.innerHTML=list.map(x=>'<span class="spr-item">'+esc(x.nombre)+' · <small>Consulta oficial; sin dato estructurado verificado</small></span>').join("");
+ for(const x of list){
+   const p=coord(x.nombre);
+   if(!p)continue;
+   L.circleMarker(p,{radius:7,color:"#275b88",weight:2,fillColor:"#fff",fillOpacity:1})
+    .bindPopup('<div class="popup-title">'+esc(x.nombre)+' · SPR CONAGUA</div><p>Pronóstico numérico: sin dato estructurado verificado.</p><p>Fecha de emisión: s/d.</p><a href="'+safeUrl+'" target="_blank" rel="noopener noreferrer">Abrir pronóstico oficial del Bajo Grijalva</a>')
+    .addTo(sprLayer);
+ }
+ if(!map.hasLayer(sprLayer))sprLayer.addTo(map);
+}
 async function load(){
  document.getElementById("statusText").textContent="Actualizando…";
- const [levels,rainCon,weather,extra,f1,insRain,insLevels,publicSources,mapping,geojson]=await Promise.all([
+ const [levels,rainCon,weather,extra,f1,insRain,insLevels,publicSources,mapping,geojson,spr]=await Promise.all([
    fetchJSON(C.urls.levels),fetchJSON(C.urls.rainConagua),fetchJSON(C.urls.weather),fetchJSON(C.urls.weatherExtra),
-   fetchText(C.urls.fuente1),fetchJSON(C.urls.insivumehRain),fetchJSON(C.urls.insivumehLevels),fetchJSON(C.urls.publicSources),fetchJSON(C.urls.forecastMapping),fetchJSON(C.urls.forecastGeojson)
+   fetchText(C.urls.fuente1),fetchJSON(C.urls.insivumehRain),fetchJSON(C.urls.insivumehLevels),fetchJSON(C.urls.publicSources),fetchJSON(C.urls.forecastMapping),fetchJSON(C.urls.forecastGeojson),fetchJSON(C.urls.sprCatalog)
  ]);
  latestForecastData=publicSources;
  forecastMapping=mapping;
  forecastGeojson=geojson;
+ sprCatalog=spr;
  const off=parseOfficial(f1),rains=[];
  for(const r of Array.isArray(rainCon)?rainCon:[]){
    if(finite(r.lluvia_hoy_desde_08_mm))rains.push({name:r.estacion,source:"CONAGUA",mm:+r.lluvia_hoy_desde_08_mm,time:r.fecha_hora,period:"HOY desde 08:00",location:"Tabasco/Chiapas"});
@@ -347,12 +371,14 @@ async function load(){
  "<p>Sin datos relevantes con los criterios actuales.</p>";
  document.getElementById("statusText").textContent="Datos consultados del Agente Hidrometeorológico · "+new Date().toLocaleString("es-MX");
  await renderForecast();
+ drawSPR(sprCatalog);
 }
 document.getElementById("refreshBtn").addEventListener("click",load);
 document.getElementById("showLevels").addEventListener("change",e=>e.target.checked?levelLayer.addTo(map):map.removeLayer(levelLayer));
 document.getElementById("showRain").addEventListener("change",e=>e.target.checked?rainLayer.addTo(map):map.removeLayer(rainLayer));
 document.getElementById("showUpstream").addEventListener("change",e=>e.target.checked?upstreamLayer.addTo(map):map.removeLayer(upstreamLayer));
 document.getElementById("forecastWindow").addEventListener("change",()=>{renderForecast();});
+document.getElementById("showSPR").addEventListener("change",e=>{if(!e.target.checked)map.removeLayer(sprLayer);drawSPR(sprCatalog);});
 setTimeout(()=>map.invalidateSize(true),250);window.addEventListener("resize",()=>map.invalidateSize(false));
 load();setInterval(load,15*60*1000);
 })();
