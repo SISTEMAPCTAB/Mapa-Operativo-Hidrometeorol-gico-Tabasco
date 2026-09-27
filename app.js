@@ -248,6 +248,12 @@ async function load(){
    fetchJSON(C.urls.levels),fetchJSON(C.urls.rainConagua),fetchJSON(C.urls.climaConagua),fetchJSON(C.urls.weather),fetchJSON(C.urls.weatherExtra),
    fetchText(C.urls.fuente1),fetchJSON(C.urls.insivumehRain),fetchJSON(C.urls.insivumehLevels),fetchJSON(C.urls.publicSources),fetchJSON(C.urls.forecastMapping),fetchJSON(C.urls.forecastGeojson)
  ]);
+ // No borrar precipitaciones previamente dibujadas ante un fallo transitorio
+ // del archivo primario del Agente: la capa se mantiene hasta la próxima consulta válida.
+ if(!Array.isArray(rainCon)){
+   document.getElementById("statusText").textContent="Lluvia CONAGUA: fuente temporalmente no disponible; se conserva la última visualización válida. Reintento automático cada 15 minutos.";
+   return;
+ }
  latestForecastData=publicSources;
  forecastMapping=mapping;
  forecastGeojson=geojson;
