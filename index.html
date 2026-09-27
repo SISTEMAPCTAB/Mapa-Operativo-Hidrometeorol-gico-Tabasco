@@ -56,6 +56,7 @@
       <label><input type="checkbox" id="showLevels" checked> Niveles</label>
       <label><input type="checkbox" id="showRain" checked> Lluvia</label>
       <label><input type="checkbox" id="showUpstream" checked> Aguas arriba</label>
+      <label><input type="checkbox" id="showCap"> Avisos CAP · SMN</label>
       <label class="forecast-control">Pronóstico SMN
         <select id="forecastWindow" aria-label="Ventana de pronóstico SMN">
           <option value="off">Oculto</option>
@@ -66,6 +67,8 @@
         </select>
       </label>
     </section>
+
+    <div id="capStatus" class="update-note" role="status">CAP SMN: consulta pendiente; capa independiente y opcional. Los avisos no reemplazan la semaforización de niveles.</div>
 
     <div class="map-wrap">
       <div id="map" role="application" aria-label="Mapa operativo"></div>
@@ -87,6 +90,7 @@
 
   <script src="config.js?v=42"></script>
   <script src="tonala-operativo.js?v=4" defer></script>
+  <script src="cap-smn.js?v=1" defer></script>
   <script>
   (function(){
     const status=document.getElementById('statusText');
