@@ -11,6 +11,57 @@ map.createPane("forecastPane");
 map.getPane("forecastPane").style.zIndex=450;
 map.getPane("forecastPane").style.pointerEvents="auto";
 const levelLayer=L.layerGroup().addTo(map),rainLayer=L.layerGroup().addTo(map),upstreamLayer=L.layerGroup().addTo(map),forecastLayer=L.layerGroup().addTo(map);
+// Retención de eventos de lluvia relevante (no suma acumulados móviles).
+// Ciclo operativo local: 08:00 de un día a 08:00 del siguiente.
+// Memoria persistida por navegador; la fuente oficial siempre conserva prioridad.
+const RAIN_MEMORY_KEY="mapa-lluvia-relevante-08-v1";
+let rainMemory={cycle:"",items:{}};
+function cycle08(value){
+ const date=value?new Date(value):new Date();
+ if(!Number.isFinite(date.getTime()))return null;
+ const parts=new Intl.DateTimeFormat("en-US",{timeZone:"America/Mexico_City",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",hourCycle:"h23"}).formatToParts(date);
+ const v=k=>Number(parts.find(p=>p.type===k)?.value||0);
+ let key=v("year")+"-"+String(v("month")).padStart(2,"0")+"-"+String(v("day")).padStart(2,"0");
+ if(v("hour")<8){
+   const d=new Date(Date.UTC(v("year"),v("month")-1,v("day")-1));
+   key=d.toISOString().slice(0,10);
+ }
+ return key;
+}
+function restoreRainMemory(){
+ const current=cycle08();
+ try{
+   const saved=JSON.parse(localStorage.getItem(RAIN_MEMORY_KEY)||"null");
+   if(saved?.cycle===current&&saved.items&&typeof saved.items==="object")rainMemory=saved;
+   else rainMemory={cycle:current,items:{}};
+ }catch{rainMemory={cycle:current,items:{}}}
+}
+function relevantRainInCycle(rains){
+ const cycle=cycle08();
+ if(rainMemory.cycle!==cycle)rainMemory={cycle,items:{}};
+ const live=new Set();
+ for(const r of rains){
+   if(!/CONAGUA/.test(r.source||"")||!finite(r.mm)||Number(r.mm)<50)continue;
+   const sampleCycle=cycle08(r.time);
+   // No utilizar boletines de ciclos anteriores ni informes con fecha futura.
+   if(sampleCycle!==cycle)continue;
+   const id=norm(r.source.includes("reporte horario")?"reporte:"+r.name:"boletin:"+r.name);
+   live.add(id);
+   const saved=rainMemory.items[id];
+   if(!saved||Number(r.mm)>saved.mm)rainMemory.items[id]={...r,cycle,retained:false};
+   else if(saved)rainMemory.items[id]={...saved,retained:Number(r.mm)<saved.mm,latestMm:Number(r.mm),latestTime:r.time};
+ }
+ try{localStorage.setItem(RAIN_MEMORY_KEY,JSON.stringify(rainMemory))}catch{}
+ // No borrar un evento al descender en otro informe del mismo ciclo.
+ const retained=Object.entries(rainMemory.items).filter(([id,r])=>r.cycle===cycle&&!live.has(id)||r.cycle===cycle&&r.retained)
+   .map(([id,r])=>({...r,retained:true,period:"máximo 24 h reportado en ciclo 08:00–08:00",latestMm:r.latestMm}));
+ const selected=rains.filter(r=>{
+   if(!/CONAGUA/.test(r.source||"")||!finite(r.mm)||r.mm<50)return true;
+   return cycle08(r.time)===cycle&&!rainMemory.items[norm(r.source.includes("reporte horario")?"reporte:"+r.name:"boletin:"+r.name)]?.retained;
+ });
+ return [...selected,...retained];
+}
+restoreRainMemory();
 let latestForecastData=null;
 
 
@@ -211,7 +262,7 @@ function popupLevel(r,off,sev,rain){
 }
 function popupRain(r,k){
  return `<div class="popup-title">${esc(r.name)}</div><div class="popup-grid"><b>Fuente</b><span>${esc(r.source)}</span>
- <b>Acumulado</b><span>${fmt(r.mm,1)} mm</span><b>Periodo</b><span>${esc(r.period)}</span>
+ <b>Acumulado</b><span>${fmt(r.mm,1)} mm</span><b>Periodo</b><span>${esc(r.period)}${r.retained?" · Registro conservado del ciclo":""}</span>
  <b>Categoría</b><span>${esc(k.label)}</span><b>Hora</b><span>${esc(r.time||"s/d")}</span>${/^(huimanguillo \(inifap\)|emiliano zapata \(chable\))$/.test(norm(r.name))?`<b>Ubicación</b><span>Punto representativo de la localidad, NO coordenada instrumental CONAGUA.</span>`:""}${norm(r.name)==="juarez pcivilchiapas"?`<b>Ubicación</b><span>Cabecera de Juárez, Chiapas (punto referencial; coordenadas instrumentales pendientes de validar).</span><b>Calidad 24 h</b><span>Mínimo observado; consultar hora de la última lectura.</span>`:""}</div>`;
 }
 function stationRainForLevel(r,rains){
@@ -282,10 +333,11 @@ async function load(){
  for(const r of insRain?.estaciones||[]){
    if(finite(r.precipitacion_24h_mm))rains.push({name:r.estacion,source:"INSIVUMEH",mm:+r.precipitacion_24h_mm,time:insRain.consultado_utc,period:"24 h",location:"Guatemala"});
  }
+ const displayedRains=relevantRainInCycle(rains);
 
  levelLayer.clearLayers();rainLayer.clearLayers();upstreamLayer.clearLayers();forecastLayer.clearLayers();
  const alerts=[];let maxRain=null,maxLevel=-1,maxCombined=-1,shownRain=0;const levelCounts=[0,0,0,0];
- for(const rr of rains){
+ for(const rr of displayedRains){
    const k=rainClass(rr.mm);
    if(k.level>=1 && (!maxRain||k.level>maxRain.level))maxRain=k;
    if(k.level<1)continue; // sólo muy fuertes o superiores
@@ -295,7 +347,7 @@ async function load(){
      if(isChiapasOrGuatemala(rr))marker.addTo(upstreamLayer);else marker.addTo(rainLayer);
      shownRain++;
    }
-   alerts.push({type:"Lluvia",name:rr.name,status:k.label,detail:`${fmt(rr.mm,1)} mm · ${rr.source} · ${rr.period}`,priority:3+k.level});
+   alerts.push({type:"Lluvia",name:rr.name,status:k.label,detail:`${fmt(rr.mm,1)} mm · ${rr.source} · ${rr.period}${rr.retained?" · REGISTRO CONSERVADO; no es lectura actual":""}`,priority:3+k.level});
  }
  for(const r of Array.isArray(levels)?levels:[]){
    const p=coord(r.estacion);if(!p)continue;
