@@ -3,6 +3,7 @@ window.MAP_CONFIG={
   urls:{
     levels:"/Agente-Hidrometeorologico-Cloud/data/niveles/Ultimo_Corte/ultimo_resumen.json",
     rainConagua:"/Agente-Hidrometeorologico-Cloud/data/niveles/Lluvia_CONAGUA/ultimo_corte.json",
+    climaConagua:"/Agente-Hidrometeorologico-Cloud/data/niveles/Clima_CONAGUA/ultimo_corte.json",
     weather:"/Agente-Hidrometeorologico-Cloud/data/weatherlink/latest.json",
     weatherExtra:"/Agente-Hidrometeorologico-Cloud/data/weatherlink/extra_latest.json",
     fuente1:"/Agente-Hidrometeorologico-Cloud/data/latest/FUENTE1.txt",
@@ -58,6 +59,9 @@ window.MAP_CONFIG={
     "San Joaquín":[17.52,-93.12],"Pueblo Nuevo":[17.80,-92.88],"Gaviotas":[17.98,-92.92],
     "Porvenir":[17.98,-92.91],"Macuspana":[17.76,-92.60],"Salto de Agua":[17.56,-92.33],
     "San Pedro":[17.80,-91.53],"Boca del Cerro":[17.43,-91.49],
+    // Puntos de localidad únicamente; NO coordenadas instrumentales de CONAGUA.
+    "HUIMANGUILLO (INIFAP)":[17.8292,-93.3917],
+    "EMILIANO ZAPATA (CHABLE)":[17.744,-91.765],
     "PEÑITAS":[17.45,-93.46],"PLATANAR":[17.91,-93.24],"SAMARIA":[18.05,-93.19],
     "MACUSPANA":[17.76,-92.60],"SALTO DE AGUA":[17.56,-92.33],"OXOLOTÁN":[17.38,-92.75],
     "TAPIJULAPA":[17.46,-92.78],"TEAPA":[17.55,-92.95],"PUYACATENGO":[17.55,-92.93],
