@@ -212,7 +212,7 @@ function popupLevel(r,off,sev,rain){
 function popupRain(r,k){
  return `<div class="popup-title">${esc(r.name)}</div><div class="popup-grid"><b>Fuente</b><span>${esc(r.source)}</span>
  <b>Acumulado</b><span>${fmt(r.mm,1)} mm</span><b>Periodo</b><span>${esc(r.period)}</span>
- <b>Categoría</b><span>${esc(k.label)}</span><b>Hora</b><span>${esc(r.time||"s/d")}</span>${norm(r.name)==="juarez pcivilchiapas"?`<b>Ubicación</b><span>Cabecera de Juárez, Chiapas (punto referencial; coordenadas instrumentales pendientes de validar).</span><b>Calidad 24 h</b><span>Mínimo observado; consultar hora de la última lectura.</span>`:""}</div>`;
+ <b>Categoría</b><span>${esc(k.label)}</span><b>Hora</b><span>${esc(r.time||"s/d")}</span>${/^(huimanguillo \(inifap\)|emiliano zapata \(chable\))$/.test(norm(r.name))?`<b>Ubicación</b><span>Punto representativo de la localidad, NO coordenada instrumental CONAGUA.</span>`:""}${norm(r.name)==="juarez pcivilchiapas"?`<b>Ubicación</b><span>Cabecera de Juárez, Chiapas (punto referencial; coordenadas instrumentales pendientes de validar).</span><b>Calidad 24 h</b><span>Mínimo observado; consultar hora de la última lectura.</span>`:""}</div>`;
 }
 function stationRainForLevel(r,rains){
   const key=norm(r.estacion);
@@ -244,16 +244,30 @@ function insRainRows(doc){
 
 async function load(){
  document.getElementById("statusText").textContent="Actualizando…";
- const [levels,rainCon,weather,extra,f1,insRain,insLevels,publicSources,mapping,geojson]=await Promise.all([
-   fetchJSON(C.urls.levels),fetchJSON(C.urls.rainConagua),fetchJSON(C.urls.weather),fetchJSON(C.urls.weatherExtra),
+ const [levels,rainCon,climaCon,weather,extra,f1,insRain,insLevels,publicSources,mapping,geojson]=await Promise.all([
+   fetchJSON(C.urls.levels),fetchJSON(C.urls.rainConagua),fetchJSON(C.urls.climaConagua),fetchJSON(C.urls.weather),fetchJSON(C.urls.weatherExtra),
    fetchText(C.urls.fuente1),fetchJSON(C.urls.insivumehRain),fetchJSON(C.urls.insivumehLevels),fetchJSON(C.urls.publicSources),fetchJSON(C.urls.forecastMapping),fetchJSON(C.urls.forecastGeojson)
  ]);
  latestForecastData=publicSources;
  forecastMapping=mapping;
  forecastGeojson=geojson;
-  const off=parseOfficial(f1),rains=[];
+ const off=parseOfficial(f1),rains=[],seenConagua=new Set();
+ // Mantener exactamente el periodo del resumen del Agente: 24 h precedentes,
+ // NO la columna "hoy desde 08:00" (que se reinicia a cero cada mañana).
  for(const r of Array.isArray(rainCon)?rainCon:[]){
-   if(finite(r.lluvia_hoy_desde_08_mm))rains.push({name:r.estacion,source:"CONAGUA",mm:+r.lluvia_hoy_desde_08_mm,time:r.fecha_hora,period:"HOY desde 08:00",location:"Tabasco/Chiapas"});
+   if(r.estado_24h!=="observado"||!finite(r.lluvia_24h_precedentes_mm)||Number(r.lluvia_24h_precedentes_mm)<0)continue;
+   // La lectura Peñitas >150 mm o advertida se excluye igual que en el Agente.
+   if(norm(r.estacion)==="penitas"&&(Number(r.lluvia_24h_precedentes_mm)>150||r.advertencia))continue;
+   const key=norm(r.estacion);seenConagua.add(key);
+   rains.push({name:r.estacion,source:"CONAGUA · reporte horario",mm:+r.lluvia_24h_precedentes_mm,time:r.fecha_hora,period:"24 h precedentes",location:"Tabasco/Chiapas"});
+ }
+ // Complemento de boletín OCFS/CONAGUA Tabasco, sin duplicar el reporte horario.
+ const boletin=Array.isArray(climaCon?.conagua_tabasco)?climaCon.conagua_tabasco:[];
+ const latestBulletin=boletin.map(r=>Date.parse(r.fecha_hora_mensaje||"")).filter(Number.isFinite).reduce((a,b)=>Math.max(a,b),0);
+ for(const r of boletin){
+   if(r.estado_dato!=="observado"||!finite(r.lluvia_24h_mm)||Number(r.lluvia_24h_mm)<0)continue;
+   if(Date.parse(r.fecha_hora_mensaje||"")!==latestBulletin||seenConagua.has(norm(r.estacion)))continue;
+   rains.push({name:r.estacion,source:"CONAGUA Tabasco · boletín",mm:+r.lluvia_24h_mm,time:r.fecha_hora_mensaje,period:"24 h del boletín",location:"Tabasco"});
  }
  for(const r of [...(weather?.stations||[]),...(extra?.stations||[])]){
    const mm=r.accumulations_mm?.["24"];
@@ -340,6 +354,7 @@ async function load(){
    if(/oxolotan|tapijulapa|teapa|puyacatengo|san joaquin|pueblo nuevo|gaviotas|el muelle|porvenir$|amatan|pichucalco|ixhuatan|chapultenango|acala|berriozabal|cipat|reforma pcivilchiapas|san cayetano|villahermosa/.test(n))return 2;
    if(/tulija|puxcatan|chilapa|salto de agua|macuspana|palenque|sinai/.test(n))return 3;
    if(/usumacinta|boca del cerro|san pedro|el tigre|el porvenir|panzos|playa grande|cahabon|peten|chixoy|coban|machaquila|urrutia|yaxha|chil[oó]n|emiliano zapata/.test(n))return 4;
+   if(/huimanguillo|inifap/.test(n))return 0;
    // INSIVUMEH se coloca en Usumacinta salvo estaciones identificadas arriba.
    if(type.includes("insivumeh"))return 4;
    return 5; // Referencias externas/sin adscripción validada, sin asociarlas a otra cuenca.
