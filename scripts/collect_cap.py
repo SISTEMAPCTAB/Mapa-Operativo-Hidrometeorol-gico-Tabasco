@@ -72,10 +72,8 @@ def polygon(text):
 def parse_cap(root, now):
     if root.tag.split("}")[-1] != "alert":
         return None
-    if value(root, "status").lower() != "actual" and value(root, "status").lower() != "actual" and value(root, "status").lower() != "actual":
-        # CAP estandar usa Actual; otros emisores usan Actual/Actual (case-insensitive).
-        if value(root, "status").lower() != "actual":
-            return None
+    if value(root, "status").lower() != "actual":
+        return None
     if value(root, "scope").lower() != "public":
         return None
     if value(root, "msgType").lower() in ("cancel", "ack", "error"):
