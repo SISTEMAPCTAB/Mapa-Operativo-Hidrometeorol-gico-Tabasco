@@ -264,7 +264,7 @@ async function load(){
  }
 
  levelLayer.clearLayers();rainLayer.clearLayers();upstreamLayer.clearLayers();forecastLayer.clearLayers();
- const alerts=[];let maxRain=null,maxLevel=-1,maxCombined=-1,shownRain=0;
+ const alerts=[];let maxRain=null,maxLevel=-1,maxCombined=-1,shownRain=0;const levelCounts=[0,0,0,0];
  for(const rr of rains){
    const k=rainClass(rr.mm);
    if(k.level>=1 && (!maxRain||k.level>maxRain.level))maxRain=k;
@@ -281,6 +281,7 @@ async function load(){
    const p=coord(r.estacion);if(!p)continue;
    const ls=levelSeverity(r,off.get(norm(r.estacion))),near=stationRainForLevel(r,rains),cs=combined(ls,near);
    maxLevel=Math.max(maxLevel,ls.level);maxCombined=Math.max(maxCombined,cs.level);
+   if(ls.level>=0&&ls.level<levelCounts.length)levelCounts[ls.level]++;
    L.marker(p,{icon:levelDot(cs.level),title:r.estacion}).bindPopup(popupLevel(r,off.get(norm(r.estacion)),cs,near)).addTo(levelLayer);
    if(cs.level>=1)alerts.push({type:"Río",name:r.estacion,river:r.rio||null,status:LEVEL_LABELS[cs.level],detail:"Nivel "+fmt(r.ultimo_nivel)+" m · NAMO: "+namoDistanceText(r.distancia_namo)+" · "+(cs.reasons.join(" · ")||"seguimiento"),priority:5+cs.level});
  }
@@ -323,7 +324,7 @@ async function load(){
  document.getElementById("levelAlert").textContent=levelText(maxLevel);
  document.getElementById("combinedAlert").textContent=levelText(maxCombined);
  document.getElementById("rainDetail").textContent=shownRain+" puntos ≥50 mm en mapa";
- document.getElementById("levelDetail").textContent=(Array.isArray(levels)?levels.length:0)+" estaciones de nivel";
+ document.getElementById("levelDetail").textContent=maxLevel>=0?levelCounts[maxLevel]+" estación(es) en "+LEVEL_LABELS[maxLevel].toLowerCase()+" · "+(Array.isArray(levels)?levels.length:0)+" estaciones reportadas":"Sin condición evaluable · "+(Array.isArray(levels)?levels.length:0)+" estaciones reportadas";
  document.getElementById("combinedDetail").textContent="Nivel + tendencia + lluvia ≥50 mm";
 
  // Orden de lectura: misma secuencia de sistemas que el Agente de Monitoreo.
