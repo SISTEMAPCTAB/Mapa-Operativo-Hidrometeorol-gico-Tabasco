@@ -50,7 +50,7 @@
       <div class="note">El mapa sólo representa lluvia observada desde categoría muy fuerte. El pronóstico SMN utiliza polígonos hidrológicos oficiales de CONAGUA para la referencia espacial. La alerta de niveles combina referencia oficial, tendencia y lluvia observada. No sustituye el semáforo oficial de CONAGUA/OCFS.</div>
     </section>
 
-    <div class="update-note">Consulta del mapa: cada 15 minutos (24/7). Niveles: según nueva lectura válida publicada por el Agente. Δ reporte = cambio desde la lectura válida previa; Δ24 h = cambio respecto de hace 24 horas. La diferencia al NAMO se muestra cuando la fuente proporciona ese dato.</div>
+    <div class="update-note">Consulta del mapa: cada 15 minutos (24/7). Lluvias CONAGUA ≥50 mm: se conserva el máximo de 24 h reportado durante el ciclo operativo 08:00–08:00; se identifica como registro conservado si disminuye la lectura posterior. No se suman acumulados ni se confunde con lluvia actual. Niveles: según nueva lectura válida publicada por el Agente. Δ reporte = cambio desde la lectura válida previa; Δ24 h = cambio respecto de hace 24 horas. La diferencia al NAMO se muestra cuando la fuente proporciona ese dato.</div>
 
     <section class="controls">
       <label><input type="checkbox" id="showLevels" checked> Niveles</label>
@@ -93,7 +93,7 @@
     const status=document.getElementById('statusText');
     function loadApp(){
       const s=document.createElement('script');
-      s.src='app.js?v=50';
+      s.src='app.js?v=51';
       s.onerror=()=>{status.textContent='No fue posible cargar la aplicación del mapa.'};
       document.body.appendChild(s);
     }
