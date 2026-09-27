@@ -24,7 +24,7 @@ function parse(text){
  if(!valid)return null;
  return {namo,prev,now,flow,rain,time:date,collected,source:readHeader(text,"ASUNTO"),age:Date.now()-t};
 }
-const markerIcon=stale=>L.divIcon({className:"",html:'<div class="level-triangle s-'+(stale?"gray":"green")+'"></div>',iconSize:[24,22],iconAnchor:[12,11]});
+const markerIcon=()=>L.divIcon({className:"",html:'<div class="level-triangle s-gray"></div>',iconSize:[24,22],iconAnchor:[12,11]}); // Sin umbral operativo homologado en este módulo.
 let layer=null,marker=null,ready=false;
 function popup(v){
  const stale=v.age>36*3600000;
@@ -50,7 +50,7 @@ async function refresh(){
   const d=parse(await r.text());
   layer.clearLayers();marker=null;
   if(!d)return;
-  marker=L.marker(REFERENCE,{icon:markerIcon(d.age>36*3600000),title:"Lacantún · BHG21 (ubicación referencial)"}).bindPopup(popup(d)).addTo(layer);
+  marker=L.marker(REFERENCE,{icon:markerIcon(),title:"Lacantún · BHG21 (ubicación referencial)"}).bindPopup(popup(d)).addTo(layer);
  }catch(e){console.warn("Lacantún BHG21: dato no disponible; capa principal intacta.",e)}
 }
 function toggle(){
