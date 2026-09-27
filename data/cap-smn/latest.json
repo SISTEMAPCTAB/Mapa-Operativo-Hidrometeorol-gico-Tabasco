@@ -1,9 +1,0 @@
-{
-  "source": "CONAGUA-SMN CAP",
-  "feed": "https://correo1.conagua.gob.mx/feedsmn/feedalert.aspx",
-  "checked_utc": "2026-09-27T12:58:43.540021+00:00",
-  "state": "unavailable",
-  "alerts": [],
-  "note": "No se presenta ningún aviso hasta validar origen, vigencia y polígono oficiales.",
-  "error": "URLError: <urlopen error [Errno -2] Name or service not known>"
-}
