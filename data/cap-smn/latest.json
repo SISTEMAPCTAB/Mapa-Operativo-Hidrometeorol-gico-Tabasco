@@ -1,7 +1,7 @@
 {
   "source": "CONAGUA-SMN CAP",
   "feed": "https://correo1.conagua.gob.mx/feedsmn/feedalert.aspx",
-  "checked_utc": "2026-09-27T06:35:05.433059+00:00",
+  "checked_utc": "2026-09-27T12:58:43.540021+00:00",
   "state": "unavailable",
   "alerts": [],
   "note": "No se presenta ningún aviso hasta validar origen, vigencia y polígono oficiales.",
