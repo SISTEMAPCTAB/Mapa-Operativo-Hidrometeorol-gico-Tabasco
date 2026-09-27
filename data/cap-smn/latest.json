@@ -1,0 +1,8 @@
+{
+  "source": "CONAGUA-SMN CAP",
+  "feed": "https://correo1.conagua.gob.mx/feedsmn/feedalert.aspx",
+  "checked_utc": null,
+  "state": "unavailable",
+  "alerts": [],
+  "note": "Consulta inicial pendiente; sin avisos oficiales verificados."
+}
