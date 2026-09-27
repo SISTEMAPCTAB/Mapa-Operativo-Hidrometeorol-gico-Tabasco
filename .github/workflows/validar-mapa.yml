@@ -8,6 +8,7 @@ on:
       - "config.js"
       - "tonala-operativo.js"
       - "cap-smn.js"
+      - "lacantun-operativo.js"
       - "index.html"
       - ".github/workflows/validar-mapa.yml"
 jobs:
@@ -20,6 +21,7 @@ jobs:
           node --check app.js
           node --check tonala-operativo.js
           node --check cap-smn.js
+          node --check lacantun-operativo.js
           python -m py_compile scripts/collect_cap.py
           node --check config.js
           python - <<'PY'
