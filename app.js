@@ -265,7 +265,7 @@ function popupLevel(r,off,sev,rain){
 function popupRain(r,k){
  return `<div class="popup-title">${esc(r.name)}</div><div class="popup-grid"><b>Fuente</b><span>${esc(r.source)}</span>
  <b>Acumulado</b><span>${fmt(r.mm,1)} mm</span><b>Periodo</b><span>${esc(r.period)}${r.retained?" · Registro conservado del ciclo":""}</span>
- <b>Categoría</b><span>${esc(k.label)}</span><b>Hora</b><span>${esc(r.time||"s/d")}</span>${/^(huimanguillo \(inifap\)|emiliano zapata \(chable\))$/.test(norm(r.name))?`<b>Ubicación</b><span>Punto representativo de la localidad, NO coordenada instrumental CONAGUA.</span>`:""}${norm(r.name)==="juarez pcivilchiapas"?`<b>Ubicación</b><span>Cabecera de Juárez, Chiapas (punto referencial; coordenadas instrumentales pendientes de validar).</span><b>Calidad 24 h</b><span>Mínimo observado; consultar hora de la última lectura.</span>`:""}</div>`;
+ <b>Categoría</b><span>${esc(k.label)}</span><b>Hora</b><span>${esc(r.time||"s/d")}</span>${/^(huimanguillo \(inifap\)|emiliano zapata \(chable\))$/.test(norm(r.name))?`<b>Ubicación</b><span>Punto representativo de la localidad, NO coordenada instrumental CONAGUA.</span>`:""}${norm(r.name)==="maya berriozabal pcivilchiapas"?`<b>Ubicación</b><span>Cabecera de Berriozábal, Chiapas (referencia INEGI; coordenadas instrumentales de WeatherLink aún no verificadas).</span>`:""}${norm(r.name)==="juarez pcivilchiapas"?`<b>Ubicación</b><span>Cabecera de Juárez, Chiapas (punto referencial; coordenadas instrumentales pendientes de validar).</span><b>Calidad 24 h</b><span>Mínimo observado; consultar hora de la última lectura.</span>`:""}</div>`;
 }
 function stationRainForLevel(r,rains){
   const key=norm(r.estacion);
