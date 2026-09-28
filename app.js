@@ -247,9 +247,11 @@ function levelObservedText(r){
  const shown=Number.isNaN(d.getTime())?String(ts):d.toLocaleString("es-MX",{timeZone:"America/Mexico_City",day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",hour12:false});
  return shown+(r.estado_dato==="heredado"?" · último dato válido conservado":"");
 }
+// La fuente agrupa San Joaquín como «Ríos de la Sierra», pero su río específico es Pichucalco.
+function riverForStation(r){return norm(r?.estacion)==="san joaquin"?"Río Pichucalco":r?.rio||"s/d";}
 function popupLevel(r,off,sev,rain){
  return `<div class="popup-title">${esc(r.estacion)}</div><div class="popup-grid">
- <b>Río</b><span>${esc(r.rio)}</span><b>Nivel</b><span>${fmt(r.ultimo_nivel)} m</span>
+ <b>Río</b><span>${esc(riverForStation(r))}</span><b>Nivel</b><span>${fmt(r.ultimo_nivel)} m</span>
  <b>Lectura real</b><span>${esc(levelObservedText(r))}</span>
  <b>Tendencia</b><span>${esc(r.tendencia||"s/d")}</span>
  <b>Δ reporte anterior</b><span>${fmt(r.delta_reporte)} m · desde la lectura válida previa</span>
@@ -355,7 +357,7 @@ async function load(){
    maxLevel=Math.max(maxLevel,ls.level);maxCombined=Math.max(maxCombined,cs.level);
    if(ls.level>=0&&ls.level<levelCounts.length)levelCounts[ls.level]++;
    L.marker(p,{icon:levelDot(cs.level),title:r.estacion}).bindPopup(popupLevel(r,off.get(norm(r.estacion)),cs,near)).addTo(levelLayer);
-   if(cs.level>=1)alerts.push({type:"Río",name:r.estacion,river:r.rio||null,status:LEVEL_LABELS[cs.level],detail:"Nivel "+fmt(r.ultimo_nivel)+" m · NAMO: "+namoDistanceText(r.distancia_namo)+" · "+(cs.reasons.join(" · ")||"seguimiento"),priority:5+cs.level});
+   if(cs.level>=1)alerts.push({type:"Río",name:r.estacion,river:riverForStation(r),status:LEVEL_LABELS[cs.level],detail:"Nivel "+fmt(r.ultimo_nivel)+" m · NAMO: "+namoDistanceText(r.distancia_namo)+" · "+(cs.reasons.join(" · ")||"seguimiento"),priority:5+cs.level});
  }
 
  // Niveles INSIVUMEH observados: visibles en la capa Aguas arriba.
